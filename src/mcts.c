@@ -137,9 +137,15 @@ void mcts_give_state(tMcts *pMcts, tBoard *pState)
 
 float mcts_evaluate(tMcts *pMcts)
 {
-    if (pMcts->pRoot->Visits <= 0.0f) return -FLT_MAX;
-    float Eval = pMcts->pRoot->Score / (float) pMcts->pRoot->Visits;
-    return (pMcts->Player) ? 1.0f - Eval : Eval;
+    float Eval = 0.0f;
+
+    if (pMcts->pRoot->Visits > 0)
+    {
+        float Score = pMcts->pRoot->Score / (float) pMcts->pRoot->Visits;
+        Eval = 2.0f * ((pMcts->Player) ? 1.0f - Score : Score) - 1.0f;
+    }
+
+    return Eval;
 }
 
 static float mcts_simulation(tMcts *pMcts, tMctn *pNode)
