@@ -11,7 +11,6 @@
 #endif
 
 #include "board.h"
-#include "board_pred.h"
 #include "debug.h"
 #include "mctn.h"
 #include "mctn_list.h"
@@ -21,13 +20,9 @@
 #include "types.h"
 #include "util.h"
 
-#define PREDICTION_PATH_LENGTH  11
-#define PREDICTION_MOVE_CUTOFF  44
-
 static float mcts_simulation(tMcts *pMcts, tMctn *pNode);
 static int mcts_expand_node(tMcts *pMcts, tMctn *pNode);
 static float mcts_simulate_playout(tMcts *pMcts, tBoard *pState);
-static void mcts_check_prediction_cond(tMcts *pMcts);
 
 #ifdef TIMED
 static double time_diff_ms(struct timespec *pBegin, struct timespec *pEnd);
@@ -51,26 +46,6 @@ int mcts_init(tMcts *pMcts, tRules *pRules, tBoard *pState, tMctsConfig *pConfig
     pMcts->Player = rules_player(pRules, pState);
     pMcts->Config = *pConfig;
 
-    switch (pMcts->Config.PredictionPolicy)
-    {
-        case PREDICTION_POLICY_ALWAYS:
-        {
-            pMcts->Predict = true;
-            break;
-        }
-        case PREDICTION_POLICY_LONGPATHS:
-        case PREDICTION_POLICY_NEVER:
-        {
-            pMcts->Predict = false;
-            break;
-        }
-        default: 
-        {
-            dbg_printf(DEBUG_WARN, "Invalid prediction policy\n");
-            break;
-        }
-    }
-
 Error: 
     return Res;
 }
@@ -79,8 +54,6 @@ void mcts_config_init(tMctsConfig *pConfig)
 {
     pConfig->Simulations = 10000;
     pConfig->ScoringAlgorithm = SCORING_ALGORITHM_OPTIMAL;
-    pConfig->PredictionPolicy = PREDICTION_POLICY_NEVER;
-    pConfig->PredictionStrategy = PREDICTION_STRATEGY_NBR_LINREG;
 }
 
 void mcts_free(tMcts *pMcts)
@@ -93,8 +66,6 @@ void mcts_free(tMcts *pMcts)
 void mcts_simulate(tMcts *pMcts)
 {
     tVisits Simulations = pMcts->Config.Simulations, Count = 0;
-
-    mcts_check_prediction_cond(pMcts);
 
 #ifdef TIMED
     struct timespec Begin, End;
@@ -164,7 +135,7 @@ void mcts_give_state(tMcts *pMcts, tBoard *pState)
     }
 }
 
-float mcts_get_eval(tMcts *pMcts)
+float mcts_evaluate(tMcts *pMcts)
 {
     if (pMcts->pRoot->Visits <= 0.0f) return -FLT_MAX;
     float Eval = pMcts->pRoot->Score / (float) pMcts->pRoot->Visits;
@@ -253,39 +224,11 @@ static float mcts_simulate_playout(tMcts *pMcts, tBoard *pState)
 
     rules_simulate_playout(pMcts->pRules, &Board, &pMcts->Rand);
     
-    Score = (pMcts->Predict) 
-        ? board_predict_score(&Board, pMcts->Config.PredictionStrategy)
-        : board_fscore(board_score(&Board, pMcts->Config.ScoringAlgorithm));
+    Score = board_fscore(board_score(&Board, pMcts->Config.ScoringAlgorithm));
 
     Res = (pMcts->Player) ? Score : 1.0f - Score;
 
     return Res;
-}
-
-static void mcts_check_prediction_cond(tMcts *pMcts)
-{
-    if (pMcts->Config.PredictionPolicy == PREDICTION_POLICY_ALWAYS 
-        OR pMcts->Config.PredictionPolicy == PREDICTION_POLICY_NEVER)
-    {
-        return;
-    }
-
-    if (board_move(&pMcts->pRoot->State) >= PREDICTION_MOVE_CUTOFF)
-    {
-        if (pMcts->Predict)
-        {
-            pMcts->Predict = false;
-        }
-    }
-    else if (NOT pMcts->Predict AND pMcts->Config.PredictionPolicy == PREDICTION_POLICY_LONGPATHS)
-    {
-        tSize LongestPath = board_longest_path(&pMcts->pRoot->State);
-
-        if (LongestPath >= PREDICTION_PATH_LENGTH)
-        {
-            pMcts->Predict = true;
-        }
-    }
 }
 
 #ifdef TIMED

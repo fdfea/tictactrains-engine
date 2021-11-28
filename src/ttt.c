@@ -126,10 +126,9 @@ int main(void)
             free(pMctsStr);
             pMctsStr = NULL;
 
-            float Eval = mcts_get_eval(&Game.Mcts);
+            float Eval = mcts_evaluate(&Game.Mcts);
             if (Eval > -FLT_MAX) printf("Eval: %.2f\n\n", Eval);
         }
-
 #endif
 
         ttt_give_move(&Game, Index);
@@ -141,6 +140,9 @@ int main(void)
             printf("AFTER SHIFT\n%s\n", pMctsStr);
             free(pMctsStr);
             pMctsStr = NULL;
+
+            float Eval = mcts_evaluate(&Game.Mcts);
+            if (Eval > -FLT_MAX) printf("Eval: %.2f\n\n", Eval);
         }
 #endif
 

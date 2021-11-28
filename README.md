@@ -53,9 +53,7 @@ The options are:
 * `COMPUTER_PLAYER` – Whether the computer will be X or O
 * `RULES_TYPE` – The type of rules to play with
 * `SIMULATIONS` – How many times the computer should simulate before moving
-* `SCORING_ALGORITHM` – The algorithm to score simulations when not predicting
-* `PREDICTION_POLICY` – When the computer should predict the score of simulations
-* `PREDICTION_STRATEGY` – How the computer should predict the outcome of a simulation
+* `SCORING_ALGORITHM` – The algorithm to score simulated games
 * `STARTING_POSITION` – The position to start the game from
 
 See the configuration file for additional details. 
@@ -125,25 +123,6 @@ A few rule sets are provided. The default is "Classical" rules, which is notated
 The artificially intelligent opponent uses the Monte Carlo Tree Search algorithm. Essentially, it works by expanding a search tree from the current game state. The AI strategically works its way down the tree until it finds a leaf node and then expands the node's children. Then it simulates a playout from one of the new nodes and propagates the result back up to the root of the tree. It repeats this process for a given number of simulations. The tree looks like a minimax tree, but the nodes with the best score are explored more, and the root child with the most visits is ultimately the one that the AI chooses. This allows the AI to avoid exploring nodes that are statistically unlikely to be good, saving a lot of time compared to minimax. You will find that the AI is very strong with 10000 or more simulations per move, taking an average of about 400 ms on my machine, when optimal scoring and sufficient compiler optimization are used. 
 
 The search tree can also get rather large when a high number of simulations are used. This is one of the main reasons I used C to implement the game, as I was able to condense each search tree node into a minimum of 31 bytes, which makes the size of the tree negligible for just about any device or use case. 
-
-However, when the paths get long during the game (longer than about 12 pieces), the engine can get rather slow because the simulation scoring algorithm is technically NP-hard (longest path problem). To combat this, I implemented a few machine learning models to predict the outcome of a simulation, namely linear regression, logistic regression, and a neural network regressor. The linear and logistic regression models predict the score of a board using the number of pieces in a given board area and the neighbor count of each square (0-4). For example, a given board area might look something like:
-
-```
-7 [ ][ ][ ][ ][ ][ ][ ]
-6 [ ][ ][ ][ ][ ][ ][ ]
-5 [ ][ ][X][ ][X][X][ ]
-4 [ ][X][X][X][X][X][ ]
-3 [ ][ ][ ][X][ ][ ][ ]
-2 [ ][ ][ ][ ][ ][ ][ ]
-1 [ ][ ][ ][ ][ ][ ][ ]
-&  a  b  c  d  e  f  g
-```
-
-There are 9 pieces in this board area, and each piece is associated with its neighbors by counting the number of pieces that are directly adjacent (left, right, top, or bottom). The linear regression model finds all the board areas for each player, predicts the longest path through each board area, and determines a winner by deciding which player had the longest predicted path. The logistic regression model finds the best board area for each player using linear regression, uses a logistic model to compare the two best areas, and then returns its evaluation of which player is most likely to be the winner. With these regression models I achieved an accuracy of about 87-93% (in terms of mean absolute error in path length prediction and predicted win versus true win, respectively).
-
-The multilayer perceptron neural network regressor predicts the outcome of a game by looking at the shape of all the board areas for each player. The shape is determined by looking at each square in the area and the 8 surrounding squares. The model classifies each square in a board area into one of 33 shapes and does this for each square in each area. Then the data is fed into the neural network, which outputs the predicted path length of each area. The longest predicted paths for each player are compared to determine the winner. I achieved about 95% accuracy (in terms of mean absolute error in predicted path length) with this method. 
-
-The models were each trained with millions of randomly simulated games. They make the AI faster and no longer scale with path length, but are less accurate when a high degree of precision is needed (in the endgame) as a result of the models' criteria for a win being slightly different than the true criteria due to information loss during feature extraction. I will also note that it not expected that these models would be extremely accurate because the problem for scoring the game is NP-hard, so you wouldn't expect that there would be a way to do it with extreme accuracy in much less time. 
 
 ### **Credits**
 

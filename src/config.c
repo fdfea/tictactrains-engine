@@ -19,8 +19,6 @@
 #define CONFIG_RULES_TYPE           "RULES_TYPE"
 #define CONFIG_SIMULATIONS          "SIMULATIONS"
 #define CONFIG_SCORING_ALGORITHM    "SCORING_ALGORITHM"
-#define CONFIG_PREDICTION_POLICY    "PREDICTION_POLICY"
-#define CONFIG_PREDICTION_STRATEGY  "PREDICTION_STRATEGY"
 #define CONFIG_START_POSITION       "STARTING_POSITION"
 
 #define CONFIG_MAXLINE              (128)
@@ -56,12 +54,12 @@ int config_load(tConfig *pConfig)
     char Buf[CONFIG_MAXLINE];
     char *pKey = NULL, *pValue = NULL, *pEnd = NULL, *pS = NULL, *pD = NULL;
     
-    struct 
+    struct
     {
-        bool ComputerPlaying, ComputerPlayer, RulesType, Simulations, 
-             ScoringAlgorithm, PredictionPolicy, PredictionStrategy, StartPosition;
-    } 
-    Found = {false, false, false, false, false, false, false, false};
+        bool ComputerPlaying, ComputerPlayer, RulesType,
+             Simulations, ScoringAlgorithm, StartPosition;
+    }
+    Found = {false, false, false, false, false, false};
 
     if ((pFile = fopen(CONFIG_FILENAME, "r")) ISNOT NULL)
     {
@@ -209,60 +207,6 @@ int config_load(tConfig *pConfig)
                 }
                 Found.ScoringAlgorithm = true;
             }
-            else if (NOT Found.PredictionPolicy AND CONFIG_STRNCMP(pKey, CONFIG_PREDICTION_POLICY))
-            {
-                switch (Val)
-                {
-                    case PREDICTION_POLICY_NEVER: 
-                    {
-                        pConfig->MctsConfig.PredictionPolicy = PREDICTION_POLICY_NEVER;
-                        break;  
-                    }
-                    case PREDICTION_POLICY_ALWAYS:
-                    {
-                        pConfig->MctsConfig.PredictionPolicy = PREDICTION_POLICY_ALWAYS;
-                        break;
-                    }
-                    case PREDICTION_POLICY_LONGPATHS:
-                    {
-                        pConfig->MctsConfig.PredictionPolicy = PREDICTION_POLICY_LONGPATHS;
-                        break;
-                    }
-                    default: 
-                    {
-                        Res = -EINVAL;
-                        goto Error;
-                    }
-                }
-                Found.PredictionPolicy = true;
-            }
-            else if (NOT Found.PredictionStrategy AND CONFIG_STRNCMP(pKey, CONFIG_PREDICTION_STRATEGY))
-            {
-                switch (Val)
-                {
-                    case PREDICTION_STRATEGY_NBR_LINREG:
-                    {
-                        pConfig->MctsConfig.PredictionStrategy = PREDICTION_STRATEGY_NBR_LINREG;
-                        break;  
-                    }
-                    case PREDICTION_STRATEGY_NBR_LOGREG:
-                    {
-                        pConfig->MctsConfig.PredictionStrategy = PREDICTION_STRATEGY_NBR_LOGREG;
-                        break;
-                    }
-                    case PREDICTION_STRATEGY_SHP_MLP:
-                    {
-                        pConfig->MctsConfig.PredictionStrategy = PREDICTION_STRATEGY_SHP_MLP;
-                        break;
-                    }
-                    default:
-                    {
-                        Res = -EINVAL;
-                        goto Error;
-                    }
-                }
-                Found.PredictionStrategy = true;
-            }
             else
             {
                 Res = -EINVAL;
@@ -282,8 +226,6 @@ int config_load(tConfig *pConfig)
     dbg_printf(DEBUG_INFO, "%s: %d\n", CONFIG_RULES_TYPE, pConfig->RulesConfig.RulesType);
     dbg_printf(DEBUG_INFO, "%s: %d\n", CONFIG_SIMULATIONS, pConfig->MctsConfig.Simulations);
     dbg_printf(DEBUG_INFO, "%s: %d\n", CONFIG_SCORING_ALGORITHM, pConfig->MctsConfig.ScoringAlgorithm);
-    dbg_printf(DEBUG_INFO, "%s: %d\n", CONFIG_PREDICTION_POLICY, pConfig->MctsConfig.PredictionPolicy);
-    dbg_printf(DEBUG_INFO, "%s: %d\n\n", CONFIG_PREDICTION_STRATEGY, pConfig->MctsConfig.PredictionStrategy);
 
     goto Success;
 

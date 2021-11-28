@@ -30,6 +30,29 @@ static tSize board_index_longest_path(tBoard *pBoard, tIndex Index, uint64_t Che
 static tSize board_index_checked_path(tBoard *pBoard, tIndex Index, uint64_t ChkIn, uint64_t *pChkOut);
 static bool board_adj_index_not_empty(tBoard *pBoard, tIndex Index);
 
+static bool board_index_empty(tBoard *pBoard, tIndex Index);
+static bool board_index_player(tBoard *pBoard, tIndex Index);
+static bool board_index_left_valid(tIndex Index);
+static bool board_index_right_valid(tIndex Index);
+static bool board_index_top_valid(tIndex Index);
+static bool board_index_bottom_valid(tIndex Index);
+static tIndex board_index_left(tIndex Index);
+static tIndex board_index_right(tIndex Index);
+static tIndex board_index_top(tIndex Index);
+static tIndex board_index_bottom(tIndex Index);
+
+//make lookup table for these???
+/*
+#define LEFT(Index)         (Index - 1)
+#define RIGHT(Index)        (Index + 1)
+#define TOP(Index)          (Index - COLUMNS)
+#define BOTTOM(Index)       (Index + COLUMNS)
+#define LEFT_VALID(Index)   (Index % COLUMNS > 0)
+#define RIGHT_VALID(Index)  (Index % COLUMNS < COLUMNS - 1)
+#define TOP_VALID(Index)    (Index >= COLUMNS)
+#define BOTTOM_VALID(Index) (Index < ROWS * (COLUMNS - 1))
+*/
+
 static tSize max_size(tSize A, tSize B);
 
 void board_init(tBoard *pBoard)
@@ -434,7 +457,7 @@ bool board_index_valid(tIndex Index)
     return Index >= 0 AND Index < ROWS*COLUMNS;
 }
 
-bool board_index_empty(tBoard *pBoard, tIndex Index)
+static bool board_index_empty(tBoard *pBoard, tIndex Index)
 {
     if (NOT board_index_valid(Index))
     {
@@ -444,7 +467,7 @@ bool board_index_empty(tBoard *pBoard, tIndex Index)
     return NOT BitTest64(pBoard->Valid, Index);
 }
 
-bool board_index_player(tBoard *pBoard, tIndex Index)
+static bool board_index_player(tBoard *pBoard, tIndex Index)
 {
     if (board_index_empty(pBoard, Index))
     {
@@ -454,42 +477,42 @@ bool board_index_player(tBoard *pBoard, tIndex Index)
     return BitTest64(pBoard->Data, Index);
 }
 
-bool board_index_left_valid(tIndex Index)
+static bool board_index_left_valid(tIndex Index)
 {
     return Index % COLUMNS > 0;
 }
 
-bool board_index_right_valid(tIndex Index)
+static bool board_index_right_valid(tIndex Index)
 {
     return Index % COLUMNS < COLUMNS-1;
 }
 
-bool board_index_top_valid(tIndex Index)
+static bool board_index_top_valid(tIndex Index)
 {
     return Index >= COLUMNS;
 }
 
-bool board_index_bottom_valid(tIndex Index)
+static bool board_index_bottom_valid(tIndex Index)
 {
     return Index < ROWS*(COLUMNS-1);
 }
 
-tIndex board_index_left(tIndex Index)
+static tIndex board_index_left(tIndex Index)
 {
     return Index-1;
 }
 
-tIndex board_index_right(tIndex Index)
+static tIndex board_index_right(tIndex Index)
 {
     return Index+1;
 }
 
-tIndex board_index_top(tIndex Index)
+static tIndex board_index_top(tIndex Index)
 {
     return Index-COLUMNS;
 }
 
-tIndex board_index_bottom(tIndex Index)
+static tIndex board_index_bottom(tIndex Index)
 {
     return Index+COLUMNS;
 }

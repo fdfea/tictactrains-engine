@@ -41,15 +41,5 @@ tIndex board_id_index(char (*pId)[BOARD_ID_STR_LEN]);
 char *board_index_id(tIndex Index);
 bool board_id_valid(char (*pId)[BOARD_ID_STR_LEN]);
 bool board_index_valid(tIndex Index);
-bool board_index_empty(tBoard *pBoard, tIndex Index);
-bool board_index_player(tBoard *pBoard, tIndex Index);
-bool board_index_left_valid(tIndex Index);
-bool board_index_right_valid(tIndex Index);
-bool board_index_top_valid(tIndex Index);
-bool board_index_bottom_valid(tIndex Index);
-tIndex board_index_left(tIndex Index);
-tIndex board_index_right(tIndex Index);
-tIndex board_index_top(tIndex Index);
-tIndex board_index_bottom(tIndex Index);
 
 #endif

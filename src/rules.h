@@ -42,7 +42,6 @@ typedef enum __attribute__ ((aligned(8))) MovePolicy
     O_RING3_C   = 0x0001FE0C193060FFULL,  
 }
 eMovePolicy;
-//__attribute__ ((aligned(8))) eMovePolicy;
 
 typedef struct Rules
 {
