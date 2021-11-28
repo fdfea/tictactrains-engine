@@ -119,7 +119,7 @@ int main(void)
         }
 
 #ifdef STATS
-        if (ComputerPlaying)
+        if (ComputerPlaying && Game.Mcts.pRoot->Visits > 0)
         {
             pMctsStr = mctn_string(Game.Mcts.pRoot);
             printf("BEFORE SHIFT\n%s\n", pMctsStr);
@@ -134,7 +134,7 @@ int main(void)
         ttt_give_move(&Game, Index);
 
 #ifdef STATS
-        if (ComputerPlaying)
+        if (ComputerPlaying && Game.Mcts.pRoot->Visits > 0)
         {
             pMctsStr = mctn_string(Game.Mcts.pRoot);
             printf("AFTER SHIFT\n%s\n", pMctsStr);
