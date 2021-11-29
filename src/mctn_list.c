@@ -55,7 +55,7 @@ int mctn_list_expand(tMctnList *pList, tVector *pNextStates)
         if (pList->pItems IS NULL AND Size > 0) 
         {
             Res = -ENOMEM;
-            dbg_printf(DEBUG_ERROR, "No memory available\n");
+            dbg_printf(DEBUG_LEVEL_ERROR, "No memory available\n");
             goto Error;
         }
 
@@ -71,7 +71,7 @@ int mctn_list_expand(tMctnList *pList, tVector *pNextStates)
     else
     {
         Res = -EINVAL;
-        dbg_printf(DEBUG_WARN, "List reached max capacity\n");
+        dbg_printf(DEBUG_LEVEL_WARN, "List reached max capacity\n");
         goto Error;
     }
 
@@ -96,7 +96,7 @@ int mctn_list_add(tMctnList *pList, tMctn *pNode)
         if (pList->pItems IS NULL) 
         {
             Res = -ENOMEM;
-            dbg_printf(DEBUG_ERROR, "No memory available\n");
+            dbg_printf(DEBUG_LEVEL_ERROR, "No memory available\n");
             goto Error;
         }
 
@@ -105,7 +105,7 @@ int mctn_list_add(tMctnList *pList, tMctn *pNode)
     else
     {
         Res = -EINVAL;
-        dbg_printf(DEBUG_WARN, "List reached max capacity\n");
+        dbg_printf(DEBUG_LEVEL_WARN, "List reached max capacity\n");
         goto Error;
     }
     
@@ -123,7 +123,7 @@ tMctn *mctn_list_get(tMctnList *pList, tIndex Index)
     }
     else
     {
-        dbg_printf(DEBUG_WARN, "List index out of bounds\n");
+        dbg_printf(DEBUG_LEVEL_WARN, "List index out of bounds\n");
     }
 
     return pTmp;
@@ -137,7 +137,7 @@ void mctn_list_set(tMctnList *pList, tIndex Index, tMctn *pNode)
     }
     else
     {
-        dbg_printf(DEBUG_WARN, "List index out of bounds\n");
+        dbg_printf(DEBUG_LEVEL_WARN, "List index out of bounds\n");
     }
 }
 
@@ -156,13 +156,13 @@ int mctn_list_delete(tMctnList *pList, tIndex Index)
         if (pList->pItems IS NULL AND pList->Size > 0) 
         {
             Res = -ENOMEM;
-            dbg_printf(DEBUG_ERROR, "No memory available\n");
+            dbg_printf(DEBUG_LEVEL_ERROR, "No memory available\n");
             goto Error;
         }  
     }
     else
     {
-        dbg_printf(DEBUG_WARN, "List index out of bounds\n");
+        dbg_printf(DEBUG_LEVEL_WARN, "List index out of bounds\n");
         goto Error;
     }
 

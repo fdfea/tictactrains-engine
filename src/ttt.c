@@ -63,7 +63,7 @@ int main(void)
     if (pId IS NULL)
     {
         Res = -ENOMEM;
-        dbg_printf(DEBUG_ERROR, "No memory available\n");
+        dbg_printf(DEBUG_LEVEL_ERROR, "No memory available\n");
         goto Error;
     }
 
@@ -212,7 +212,7 @@ static int ttt_load_moves(tTTT *pGame, tVector *pMoves)
         Res = ttt_give_move(pGame, Move);
         if (Res < 0)
         {
-            dbg_printf(DEBUG_ERROR, "Failed to load moves\n");
+            dbg_printf(DEBUG_LEVEL_ERROR, "Failed to load moves\n");
             board_copy(&pGame->Board, &BoardCopy);
             goto Error;
         }
@@ -262,7 +262,7 @@ int ttt_give_move(tTTT *pGame, int Index)
         OR NOT BitTest64(Indices, Index))
     {
         Res = -EINVAL;
-        dbg_printf(DEBUG_ERROR, "Invalid move attempted\n");
+        dbg_printf(DEBUG_LEVEL_ERROR, "Invalid move attempted\n");
         goto Error;
     }
 
@@ -298,7 +298,7 @@ int *ttt_get_moves(tTTT *pGame, int *pSize)
     pMoves = malloc(*pSize*sizeof(int));
     if (pMoves IS NULL)
     {
-        dbg_printf(DEBUG_ERROR, "No memory available\n");
+        dbg_printf(DEBUG_LEVEL_ERROR, "No memory available\n");
         *pSize = 0;
         goto Error;
     }

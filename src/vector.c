@@ -14,7 +14,7 @@ int vector_init(tVector *pVector)
     if (pVector->ppItems IS NULL)
     {
         Res = -ENOMEM;
-        dbg_printf(DEBUG_ERROR, "No memory available\n");
+        dbg_printf(DEBUG_LEVEL_ERROR, "No memory available\n");
         goto Error;
     }
 
@@ -56,7 +56,7 @@ bool vector_add(tVector *pVector, void *pItem)
     }
     else
     {
-        dbg_printf(DEBUG_WARN, "Vector reached max capacity\n");
+        dbg_printf(DEBUG_LEVEL_WARN, "Vector reached max capacity\n");
     }
 
     return Added;
@@ -72,7 +72,7 @@ void *vector_get(tVector *pVector, tIndex Index)
     }
     else
     {
-        dbg_printf(DEBUG_WARN, "Vector index out of bounds\n");
+        dbg_printf(DEBUG_LEVEL_WARN, "Vector index out of bounds\n");
     }
 
     return pTmp;
@@ -89,7 +89,7 @@ void *vector_set(tVector *pVector, tIndex Index, void *pItem)
     }
     else
     {
-        dbg_printf(DEBUG_WARN, "Vector index out of bounds\n");
+        dbg_printf(DEBUG_LEVEL_WARN, "Vector index out of bounds\n");
     }
 
     return pTmp;
@@ -111,7 +111,7 @@ void *vector_delete(tVector *pVector, tIndex Index)
     }
     else
     {
-        dbg_printf(DEBUG_WARN, "Vector index out of bounds\n");
+        dbg_printf(DEBUG_LEVEL_WARN, "Vector index out of bounds\n");
     }
 
     return pTmp;

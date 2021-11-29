@@ -94,7 +94,7 @@ char *mctn_string(tMctn *pNode)
     pStr = malloc(sizeof(char)*MCTN_STR_LEN);
     if (pStr IS NULL)
     {
-        dbg_printf(DEBUG_ERROR, "No memory available\n");
+        dbg_printf(DEBUG_LEVEL_ERROR, "No memory available\n");
         goto Error;
     }
 

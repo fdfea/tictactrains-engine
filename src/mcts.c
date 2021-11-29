@@ -36,7 +36,7 @@ int mcts_init(tMcts *pMcts, tRules *pRules, tBoard *pState, tMctsConfig *pConfig
     if (pMcts->pRoot IS NULL)
     {
         Res = -ENOMEM;
-        dbg_printf(DEBUG_ERROR, "No memory available\n");
+        dbg_printf(DEBUG_LEVEL_ERROR, "No memory available\n");
         goto Error;
     }
 
@@ -97,7 +97,7 @@ tBoard *mcts_get_state(tMcts *pMcts)
     }
     else
     {
-        dbg_printf(DEBUG_ERROR, "No state available\n");
+        dbg_printf(DEBUG_LEVEL_ERROR, "No state available\n");
     }
 
     return pBoard;

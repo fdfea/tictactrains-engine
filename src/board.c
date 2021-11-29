@@ -128,7 +128,7 @@ void board_make_move(tBoard *pBoard, tIndex Index, bool Player)
 {
     if (NOT board_index_empty(pBoard, Index))
     {
-        dbg_printf(DEBUG_ERROR, "Making invalid move\n");
+        dbg_printf(DEBUG_LEVEL_ERROR, "Making invalid move\n");
     }
 
     if (Player) 
@@ -210,7 +210,7 @@ tScore board_score(tBoard *pBoard, eScoringAlgorithm Algorithm)
         }
         default:
         {
-            dbg_printf(DEBUG_WARN, "Invalid scoring algorithm\n");
+            dbg_printf(DEBUG_LEVEL_WARN, "Invalid scoring algorithm\n");
             break;
         }
     }
@@ -338,13 +338,13 @@ char *board_index_id(tIndex Index)
 
     if (NOT board_index_valid(Index))
     {
-        dbg_printf(DEBUG_WARN, "Invalid index\n");
+        dbg_printf(DEBUG_LEVEL_WARN, "Invalid index\n");
     }
 
     pId = malloc(sizeof(char)*BOARD_ID_STR_LEN);
     if (pId IS NULL)
     {
-        dbg_printf(DEBUG_ERROR, "No memory available\n");
+        dbg_printf(DEBUG_LEVEL_ERROR, "No memory available\n");
         goto Error;
     }
 
@@ -361,7 +361,7 @@ char *board_string(tBoard *pBoard)
     pStr = malloc(sizeof(char)*BOARD_STR_LEN);
     if (pStr IS NULL)
     {
-        dbg_printf(DEBUG_ERROR, "No memory available\n");
+        dbg_printf(DEBUG_LEVEL_ERROR, "No memory available\n");
         goto Error;
     }
 
@@ -458,7 +458,7 @@ static inline bool board_index_adj_not_empty(tBoard *pBoard, tIndex Index)
 {
     if (NOT board_index_valid(Index))
     {
-        dbg_printf(DEBUG_WARN, "Invalid index\n");
+        dbg_printf(DEBUG_LEVEL_WARN, "Invalid index\n");
     }
 
     return (LEFT_VALID(Index) AND NOT board_index_empty(pBoard, LEFT(Index))) 
@@ -475,7 +475,7 @@ static inline bool board_index_empty(tBoard *pBoard, tIndex Index)
 {
     if (NOT board_index_valid(Index))
     {
-        dbg_printf(DEBUG_WARN, "Invalid index\n");
+        dbg_printf(DEBUG_LEVEL_WARN, "Invalid index\n");
     }
 
     return NOT BitTest64(pBoard->Valid, Index);
@@ -485,7 +485,7 @@ static inline bool board_index_player(tBoard *pBoard, tIndex Index)
 {
     if (board_index_empty(pBoard, Index))
     {
-        dbg_printf(DEBUG_WARN, "Index empty\n");
+        dbg_printf(DEBUG_LEVEL_WARN, "Index empty\n");
     }
 
     return BitTest64(pBoard->Data, Index);

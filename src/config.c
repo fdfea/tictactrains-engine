@@ -221,11 +221,11 @@ int config_load(tConfig *pConfig)
         goto NoFile;
     }
 
-    dbg_printf(DEBUG_INFO, "%s: %d\n", CONFIG_COMPUTER_PLAYING, pConfig->ComputerPlaying);
-    dbg_printf(DEBUG_INFO, "%s: %d\n", CONFIG_COMPUTER_PLAYER, pConfig->ComputerPlayer);
-    dbg_printf(DEBUG_INFO, "%s: %d\n", CONFIG_RULES_TYPE, pConfig->RulesConfig.RulesType);
-    dbg_printf(DEBUG_INFO, "%s: %d\n", CONFIG_SIMULATIONS, pConfig->MctsConfig.Simulations);
-    dbg_printf(DEBUG_INFO, "%s: %d\n", CONFIG_SCORING_ALGORITHM, pConfig->MctsConfig.ScoringAlgorithm);
+    dbg_printf(DEBUG_LEVEL_INFO, "%s: %d\n", CONFIG_COMPUTER_PLAYING, pConfig->ComputerPlaying);
+    dbg_printf(DEBUG_LEVEL_INFO, "%s: %d\n", CONFIG_COMPUTER_PLAYER, pConfig->ComputerPlayer);
+    dbg_printf(DEBUG_LEVEL_INFO, "%s: %d\n", CONFIG_RULES_TYPE, pConfig->RulesConfig.RulesType);
+    dbg_printf(DEBUG_LEVEL_INFO, "%s: %d\n", CONFIG_SIMULATIONS, pConfig->MctsConfig.Simulations);
+    dbg_printf(DEBUG_LEVEL_INFO, "%s: %d\n", CONFIG_SCORING_ALGORITHM, pConfig->MctsConfig.ScoringAlgorithm);
 
     goto Success;
 

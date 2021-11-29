@@ -36,7 +36,7 @@ uint64_t rules_policy(tRules *pRules, tBoard *pBoard)
     if (board_finished(pBoard))
     {
         Res = -EINVAL;
-        dbg_printf(DEBUG_ERROR, "Game is finshed\n");
+        dbg_printf(DEBUG_LEVEL_ERROR, "Game is finshed\n");
         goto Error;
     }
 
@@ -93,7 +93,7 @@ char *rules_moves_string(tRules *pRules, int *pMoves, int Size)
     pStr = malloc(sizeof(char)*RULES_MOVES_STR_LEN);
     if (pStr IS NULL)
     {
-        dbg_printf(DEBUG_ERROR, "No memory available\n");
+        dbg_printf(DEBUG_LEVEL_ERROR, "No memory available\n");
         goto Error;
     }
 
@@ -158,7 +158,7 @@ static bool rules_index_player(tRules *pRules, tIndex Index)
 
     if (NOT board_index_valid(Index))
     {
-        dbg_printf(DEBUG_WARN, "Invalid index\n");
+        dbg_printf(DEBUG_LEVEL_WARN, "Invalid index\n");
         goto Error;
     }
 
@@ -192,7 +192,7 @@ static void rules_by_type(tRules *pRules, eRulesType RulesType)
         }
         default: 
         {
-            dbg_printf(DEBUG_WARN, "Invalid rules type\n");
+            dbg_printf(DEBUG_LEVEL_WARN, "Invalid rules type\n");
             memcpy(&MovePolicies, &RulesClassical, PoliciesSize);
             break;
         }
