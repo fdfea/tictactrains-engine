@@ -7,13 +7,12 @@
 
 #include "bitutil.h"
 #include "debug.h"
-#include "defs.h"
 #include "random.h"
 #include "rules.h"
 #include "types.h"
 #include "util.h"
 
-#define RULES_PLAYER_MASK   0x8000000000000000ULL
+static const uint64_t RULES_PLAYER_MASK = 0x8000000000000000ULL;
 
 static void rules_by_type(tRules *pRules, eRulesType RulesType);
 static void rules_random_move(tRules *pRules, tBoard *pBoard, tRandom* pRand);
@@ -54,26 +53,27 @@ bool rules_player(tRules *pRules, tBoard *pBoard)
 bool rules_prev_player(tRules *pRules, tBoard *pBoard)
 {
     tSize Move = board_move(pBoard);
-    eMovePolicy Policy = (Move > 0) ? (uint64_t) pRules->MovePolicies[Move-1] : 0ULL;
+    eMovePolicy Policy = IF (Move > 0) THEN pRules->MovePolicies[Move-1] ELSE 0ULL;
 
     return (Policy & RULES_PLAYER_MASK) != 0ULL;
 }
 
 void rules_next_states(tRules *pRules, tBoard *pBoard, tVector *pVector)
 {
-    uint64_t Tmp, Policy = rules_policy(pRules, pBoard);
+    uint64_t Policy = rules_policy(pRules, pBoard);
     uint64_t Indices = board_valid_indices(pBoard, Policy, true);
-    tIndex Index;
     bool Player = rules_player(pRules, pBoard);
 
     while (Indices != 0ULL) 
     {
-        Tmp = Indices & -Indices;
-        Index = BitLzCount64(Tmp);
+        uint64_t Tmp = Indices & -Indices;
+        tIndex Index = BitLzCount64(Tmp);
         tBoard *pBoardCopy = malloc(sizeof(tBoard));
+
         board_copy(pBoardCopy, pBoard);
         board_make_move(pBoardCopy, Index, Player);
         vector_add(pVector, pBoardCopy);
+
         Indices ^= Tmp;
     }
 }
@@ -88,16 +88,14 @@ void rules_simulate_playout(tRules *pRules, tBoard *pBoard, tRandom *pRand)
 
 char *rules_moves_string(tRules *pRules, int *pMoves, int Size)
 {
-    char *pStr = NULL;
-
-    pStr = malloc(sizeof(char)*RULES_MOVES_STR_LEN);
-    if (pStr IS NULL)
+    char *Str = malloc(sizeof(char)*RULES_MOVES_STR_LEN);
+    if (Str IS NULL)
     {
         dbg_printf(DEBUG_LEVEL_ERROR, "No memory available\n");
         goto Error;
     }
 
-    char *pBegin = pStr, *pId = NULL;
+    char *pBegin = Str;
 
     tSize Move = 1;
     bool StartedMove = false;
@@ -105,42 +103,42 @@ char *rules_moves_string(tRules *pRules, int *pMoves, int Size)
     for (tIndex i = 0; i < Size; ++i)
     {
         tIndex Index = (tIndex) pMoves[i];
-        pId = board_index_id(Index);
+        char *pId = board_index_id(Index);
 
         if (rules_index_player(pRules, i) AND NOT StartedMove)
         {
-            pStr += sprintf(pStr, (Move < 10) ? " %d. %s " : "%d. %s ", Move, pId);
+            char *MoveFmt = IF (Move < 10) THEN " %d. %s " ELSE "%d. %s ";
+            Str += sprintf(Str, MoveFmt, Move, pId);
             Move++;
             StartedMove = true;
         }
         else
         {
-            if (NOT rules_index_player(pRules, i) AND (i + 1 < Size) 
+            if (NOT rules_index_player(pRules, i) AND (i+1 < Size) 
                 AND rules_index_player(pRules, i+1)) 
             {
-                pStr += sprintf(pStr, "%s  ", pId); 
+                Str += sprintf(Str, "%s  ", pId); 
 
                 StartedMove = false;
 
-                if ((Move - 1) % 3 == 0)
+                if ((Move-1) % 3 == 0)
                 {
-                    pStr += sprintf(pStr, "\n");
+                    Str += sprintf(Str, "\n");
                 }  
             }
             else 
             {
-                pStr += sprintf(pStr, "%s ", pId); 
+                Str += sprintf(Str, "%s ", pId); 
             }
         }
 
         free(pId);
-        pId = NULL;
     }
 
-    pStr = pBegin;
+    Str = pBegin;
 
 Error:
-    return pStr;
+    return Str;
 }
 
 static void rules_random_move(tRules *pRules, tBoard *pBoard, tRandom* pRand)
@@ -162,7 +160,7 @@ static bool rules_index_player(tRules *pRules, tIndex Index)
         goto Error;
     }
 
-    Res = (uint64_t) pRules->MovePolicies[Index] & RULES_PLAYER_MASK;
+    Res = pRules->MovePolicies[Index] & RULES_PLAYER_MASK;
 
 Error:
     return Res;
