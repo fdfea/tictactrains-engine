@@ -7,6 +7,9 @@
 #include "bitutil.h"
 #include "types.h"
 
+#define ROWS    7
+#define COLUMNS 7
+
 #define BOARD_ID_STR_LEN    3
 #define BOARD_STR_LEN       190
 
@@ -34,7 +37,6 @@ tIndex board_last_move_index(tBoard *pBoard);
 uint64_t board_valid_indices(tBoard *pBoard, uint64_t Policy, bool Adj);
 tScore board_score(tBoard *pBoard, eScoringAlgorithm Algorithm);
 float board_fscore(tScore Score);
-tSize board_longest_path(tBoard *pBoard);
 char *board_string(tBoard *pBoard);
 char board_index_char(tBoard *pBoard, tIndex Index);
 tIndex board_id_index(char (*pId)[BOARD_ID_STR_LEN]);

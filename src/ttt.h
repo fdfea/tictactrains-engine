@@ -5,7 +5,6 @@
 
 #include "board.h"
 #include "config.h"
-#include "defs.h"
 #include "mcts.h"
 #include "rules.h"
 #include "vector.h"

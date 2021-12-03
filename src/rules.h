@@ -5,10 +5,9 @@
 #include <stdint.h>
 
 #include "board.h"
-#include "defs.h"
 #include "vector.h"
 
-#define RULES_MOVES_STR_LEN     512
+#define RULES_MOVES_STR_LEN 512
 
 typedef enum RulesType
 {

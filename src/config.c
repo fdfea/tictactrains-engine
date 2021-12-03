@@ -8,7 +8,6 @@
 
 #include "config.h"
 #include "debug.h"
-#include "defs.h"
 #include "types.h"
 #include "util.h"
 #include "vector.h"
