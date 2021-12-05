@@ -20,7 +20,7 @@
 #define CONFIG_SCORING_ALGORITHM    "SCORING_ALGORITHM"
 #define CONFIG_START_POSITION       "STARTING_POSITION"
 
-#define CONFIG_MAXLINE              (128)
+#define CONFIG_MAXLINE              128
 #define CONFIG_MAX_MOVES_STR_LEN    (ROWS*COLUMNS*2)
 
 #define CONFIG_STRNCMP(pKey, Param) (strncmp(pKey, Param, sizeof(Param)) == 0)
@@ -66,19 +66,16 @@ int config_load(tConfig *pConfig)
         {
             Line++;
 
-            //remove newline and spaces
             Buf[strcspn(Buf, "\n")] = '\0';
 
             pS = &Buf[0], pD = pS;
             do while (isspace(*pS)) pS++; while ((*pD++ = *pS++));
 
-            //check for empty line or comment
             if (Buf[0] == '\0' OR Buf[0] == '#')
             {
                 continue;
             }
 
-            //handle configuration parameters
             pKey = strtok(Buf, "=");
             pValue = strtok(NULL, "=");
 
@@ -100,7 +97,6 @@ int config_load(tConfig *pConfig)
                 continue;
             }
 
-            //convert value to number
             Val = strtol(pValue, &pEnd, 10);
 
             if (pValue == pEnd)
@@ -109,7 +105,6 @@ int config_load(tConfig *pConfig)
                 goto Error;
             }
 
-            //compare keys to config params
             if (NOT Found.ComputerPlaying AND CONFIG_STRNCMP(pKey, CONFIG_COMPUTER_PLAYING))
             {
                 if (Val == 0)
@@ -216,7 +211,7 @@ int config_load(tConfig *pConfig)
     else
     {
         Res = -ENOENT;
-        fprintf(stderr, "[ERROR] Could not open file \"%s\"\n", CONFIG_FILENAME);
+        fprintf(stderr, "[ERROR] Cannot open file \"%s\"\n", CONFIG_FILENAME);
         goto NoFile;
     }
 

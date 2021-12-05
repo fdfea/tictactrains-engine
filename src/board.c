@@ -15,15 +15,6 @@ static const uint64_t BOARD_MASK = 0x0001FFFFFFFFFFFFULL;
 static const tIndex BOARD_LAST_MOVE_INDEX   = 56;
 static const tSize  BOARD_MIN_ADJ_SQS       = 4;
 
-static const float BOARD_WIN    = 1.0f;
-static const float BOARD_DRAW   = 0.5f;
-static const float BOARD_LOSS   = 0.0f;
-
-static const float BOARD_WIN_BASE       = 0.90f;
-static const float BOARD_WIN_BONUS      = 0.025f;
-static const float BOARD_LOSS_BASE      = 0.10f;
-static const float BOARD_LOSS_PENALTY   = 0.025f;
-
 typedef struct IndexLookup
 {
     bool LeftValid, RightValid, TopValid, BottomValid;
@@ -98,7 +89,7 @@ static tScore board_quick_score(tBoard *pBoard);
 static tSize board_index_longest_path(tBoard *pBoard, tIndex Index, uint64_t Checked);
 static tSize board_index_checked_path(tBoard *pBoard, tIndex Index, uint64_t Checked, uint64_t *pPath);
 
-static inline bool board_index_has_neighbor(tBoard *pBoard, tIndex Index);
+static inline bool board_index_neighbor(tBoard *pBoard, tIndex Index);
 static inline bool board_index_empty(tBoard *pBoard, tIndex Index);
 static inline bool board_index_player(tBoard *pBoard, tIndex Index);
 static inline tSize board_index_adjacent(uint64_t Checked, tIndex Index);
@@ -114,9 +105,9 @@ void board_init(tBoard *pBoard)
     pBoard->Valid = 0ULL;
 }
 
-void board_copy(tBoard *pDest, tBoard *pSrc)
+void board_copy(tBoard *pBoard, tBoard *pB)
 {
-    *pDest = *pSrc;
+    *pBoard = *pB;
 }
 
 bool board_equals(tBoard *pBoard, tBoard *pB)
@@ -175,7 +166,7 @@ uint64_t board_valid_indices(tBoard *pBoard, uint64_t Policy, bool OnlyAdjacent)
         {
             BitSet64(&ValidIndices, Index);
 
-            if (OnlyAdjacent AND board_index_has_neighbor(pBoard, Index)) 
+            if (OnlyAdjacent AND board_index_neighbor(pBoard, Index)) 
             {
                 BitSet64(&ValidAdjacentIndices, Index);
             }
@@ -254,13 +245,13 @@ static tScore board_quick_score(tBoard *pBoard)
     tSize ScoreX = 1, ScoreO = 1;
     uint64_t Checked = 0ULL;
 
-    for (tIndex Index = 0; Index < ROWS*COLUMNS; ++Index)
+    for (tIndex i = 0; i < ROWS*COLUMNS; ++i)
     {
-        bool Player = board_index_player(pBoard, Index);
+        bool Player = board_index_player(pBoard, i);
 
-        if (board_index_adjacent(IF Player THEN pBoard->Data ELSE ~pBoard->Data, Index) <= 1)
+        if (board_index_adjacent(IF Player THEN pBoard->Data ELSE ~pBoard->Data, i) <= 1)
         {
-            tSize Score = board_index_checked_path(pBoard, Index, 0ULL, &Checked);
+            tSize Score = board_index_checked_path(pBoard, i, 0ULL, &Checked);
 
             if (Player)
             {
@@ -273,13 +264,13 @@ static tScore board_quick_score(tBoard *pBoard)
         }
     }
 
-    for (tIndex Index = 0; Index < ROWS*COLUMNS; ++Index)
+    for (tIndex i = 0; i < ROWS*COLUMNS; ++i)
     {
-        if (NOT BitTest64(Checked, Index))
+        if (NOT BitTest64(Checked, i))
         {
-            tSize Score = board_index_checked_path(pBoard, Index, 0ULL, &Checked);
+            tSize Score = board_index_checked_path(pBoard, i, 0ULL, &Checked);
 
-            if (board_index_player(pBoard, Index))
+            if (board_index_player(pBoard, i))
             {
                 SET_IF_GREATER(Score, ScoreX);
             }
@@ -293,34 +284,11 @@ static tScore board_quick_score(tBoard *pBoard)
     return ScoreX - ScoreO;
 }
 
-float board_fscore(tScore Score)
-{
-    float Res;
-    
-    if (Score > 0) 
-    {
-        float Bonus = Score * BOARD_WIN_BONUS;
-        Res = IF (BOARD_WIN_BASE + Bonus > BOARD_WIN)
-            THEN BOARD_WIN ELSE (BOARD_WIN_BASE + Bonus);
-    }
-    else if (Score < 0)
-    {
-        float Penalty = Score * BOARD_LOSS_PENALTY;
-        Res = IF (BOARD_LOSS_BASE + Penalty < BOARD_LOSS)
-            THEN BOARD_LOSS ELSE (BOARD_LOSS_BASE + Penalty);
-    }
-    else
-    {
-        Res = BOARD_DRAW;
-    } 
-
-    return Res;
-}
-
 char board_index_char(tBoard *pBoard, tIndex Index)
 {
     return IF board_index_empty(pBoard, Index) THEN ' '
-        ELSE IF board_index_player(pBoard, Index) THEN 'X' ELSE 'O';
+        ELSE IF board_index_player(pBoard, Index) THEN 'X'
+        ELSE 'O';
 }
 
 tIndex board_id_index(char (*pId)[BOARD_ID_STR_LEN])
@@ -367,15 +335,15 @@ char *board_string(tBoard *pBoard)
 
     char *pBegin = Str;
 
-    for (tIndex Index = 0; Index < ROWS*COLUMNS; ++Index)
+    for (tIndex i = 0; i < ROWS*COLUMNS; ++i)
     {
-        if (Index % ROWS == 0)
+        if (i % ROWS == 0)
         {
-            Str += sprintf(Str, "%d ", ROWS-Index/ROWS);
+            Str += sprintf(Str, "%d ", ROWS-i/ROWS);
         }
 
-        char *SqFmt = IF ((Index+1) % COLUMNS == 0) THEN "[%c]\n" ELSE "[%c]";
-        Str += sprintf(Str, SqFmt, board_index_char(pBoard, Index));
+        char *SqFmt = IF ((i+1) % COLUMNS == 0) THEN "[%c]\n" ELSE "[%c]";
+        Str += sprintf(Str, SqFmt, board_index_char(pBoard, i));
     }
 
     Str += sprintf(Str, "& ");
@@ -458,7 +426,7 @@ static tSize board_index_checked_path(tBoard *pBoard, tIndex Index, uint64_t Che
     return 1 + MaxPathLen;
 }
 
-static inline bool board_index_has_neighbor(tBoard *pBoard, tIndex Index)
+static inline bool board_index_neighbor(tBoard *pBoard, tIndex Index)
 {
     if (NOT board_index_valid(Index))
     {
@@ -497,10 +465,10 @@ static inline bool board_index_player(tBoard *pBoard, tIndex Index)
 
 static inline tSize board_index_adjacent(uint64_t Checked, tIndex Index)
 {
-    return (LEFT_VALID(Index) && BitTest64(Checked, LEFT(Index)))
-        + (RIGHT_VALID(Index) && BitTest64(Checked, RIGHT(Index)))
-        + (TOP_VALID(Index) && BitTest64(Checked, TOP(Index)))
-        + (BOTTOM_VALID(Index) && BitTest64(Checked, BOTTOM(Index)));
+    return (LEFT_VALID(Index) AND BitTest64(Checked, LEFT(Index)))
+        + (RIGHT_VALID(Index) AND BitTest64(Checked, RIGHT(Index)))
+        + (TOP_VALID(Index) AND BitTest64(Checked, TOP(Index)))
+        + (BOTTOM_VALID(Index) AND BitTest64(Checked, BOTTOM(Index)));
 }
 
 static inline bool board_traverse_left(tBoard *pBoard, tIndex Index, bool Player, uint64_t Checked)

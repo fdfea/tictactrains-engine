@@ -20,9 +20,19 @@
 #include "types.h"
 #include "util.h"
 
-static float mcts_simulation(tMcts *pMcts, tMctn *pNode);
+static const float BOARD_WIN    = 1.0f;
+static const float BOARD_DRAW   = 0.5f;
+static const float BOARD_LOSS   = 0.0f;
+
+static const float BOARD_WIN_BASE       = 0.90f;
+static const float BOARD_WIN_BONUS      = 0.025f;
+static const float BOARD_LOSS_BASE      = 0.10f;
+static const float BOARD_LOSS_PENALTY   = 0.025f;
+
 static int mcts_expand_node(tMcts *pMcts, tMctn *pNode);
+static float mcts_simulation(tMcts *pMcts, tMctn *pNode);
 static float mcts_simulate_playout(tMcts *pMcts, tBoard *pState);
+static float mcts_weight_score(tScore Score);
 
 #ifdef TIMED
 static double time_diff_ms(struct timespec *pBegin, struct timespec *pEnd);
@@ -52,7 +62,7 @@ Error:
 
 void mcts_config_init(tMctsConfig *pConfig)
 {
-    pConfig->Simulations = 10000;
+    pConfig->Simulations = 1000;
     pConfig->ScoringAlgorithm = SCORING_ALGORITHM_OPTIMAL;
 }
 
@@ -60,7 +70,6 @@ void mcts_free(tMcts *pMcts)
 {
     mctn_free(pMcts->pRoot);
     free(pMcts->pRoot);
-    pMcts->pRoot = NULL;
 }
 
 void mcts_simulate(tMcts *pMcts)
@@ -89,7 +98,7 @@ tBoard *mcts_get_state(tMcts *pMcts)
 {
     tBoard *pBoard = NULL;
 
-    if (NOT board_finished(&pMcts->pRoot->State) 
+    if (NOT board_finished(&pMcts->pRoot->State)
         AND NOT mctn_list_empty(&pMcts->pRoot->Children))
     {
         tMctn *pBestChild = mctn_most_visited_child(pMcts->pRoot);
@@ -142,10 +151,42 @@ float mcts_evaluate(tMcts *pMcts)
     if (pMcts->pRoot->Visits > 0)
     {
         float Score = pMcts->pRoot->Score / (float) pMcts->pRoot->Visits;
-        Eval = 2.0f * ((pMcts->Player) ? 1.0f - Score : Score) - 1.0f;
+        Eval = IF (pMcts->Player) THEN (1.0f - Score) ELSE Score;
+        Eval = 2.0f * Eval - 1.0f;
     }
 
     return Eval;
+}
+
+static int mcts_expand_node(tMcts *pMcts, tMctn *pNode)
+{
+    int Res = 0;
+
+    tVector NextStates;
+    Res = vector_init(&NextStates);
+    if (Res < 0)
+    {
+        goto Error;
+    }
+
+    rules_next_states(pMcts->pRules, &pNode->State, &NextStates);
+
+    Res = mctn_expand(pNode, &NextStates);
+    if (Res < 0)
+    {
+        goto Error;
+    }
+
+    for (tIndex i = 0; i < vector_size(&NextStates); i++) 
+    {
+        tBoard *pBoard = (tBoard *) vector_get(&NextStates, i);
+        free(pBoard);
+    }
+    vector_free(&NextStates);
+    mctn_list_shuffle(&pNode->Children, &pMcts->Rand);
+
+Error:
+    return Res;
 }
 
 static float mcts_simulation(tMcts *pMcts, tMctn *pNode)
@@ -181,42 +222,10 @@ static float mcts_simulation(tMcts *pMcts, tMctn *pNode)
     if (NOT board_finished(pState))
     {
         bool StatePlayer = rules_prev_player(pRules, pState);
-        float Score = (StatePlayer == pMcts->Player) 
-            ? Res : 1.0f - Res;
+        float Score = IF (StatePlayer == pMcts->Player) THEN Res ELSE (1.0f - Res);
 
         mctn_update(pNode, Score);
     }
-
-Error:
-    return Res;
-}
-
-static int mcts_expand_node(tMcts *pMcts, tMctn *pNode)
-{
-    int Res = 0;
-
-    tVector NextStates;
-    Res = vector_init(&NextStates);
-    if (Res < 0)
-    {
-        goto Error;
-    }
-
-    rules_next_states(pMcts->pRules, &pNode->State, &NextStates);
-
-    Res = mctn_expand(pNode, &NextStates);
-    if (Res < 0)
-    {
-        goto Error;
-    }
-
-    for (tIndex i = 0; i < vector_size(&NextStates); i++) 
-    {
-        tBoard *pBoard = (tBoard *) vector_get(&NextStates, i);
-        free(pBoard);
-    }
-    vector_free(&NextStates);
-    mctn_list_shuffle(&pNode->Children, &pMcts->Rand);
 
 Error:
     return Res;
@@ -230,9 +239,33 @@ static float mcts_simulate_playout(tMcts *pMcts, tBoard *pState)
 
     rules_simulate_playout(pMcts->pRules, &Board, &pMcts->Rand);
     
-    Score = board_fscore(board_score(&Board, pMcts->Config.ScoringAlgorithm));
+    Score = mcts_weight_score(board_score(&Board, pMcts->Config.ScoringAlgorithm));
 
-    Res = (pMcts->Player) ? Score : 1.0f - Score;
+    Res = IF (pMcts->Player) THEN Score ELSE (1.0f - Score);
+
+    return Res;
+}
+
+static float mcts_weight_score(tScore Score)
+{
+    float Res;
+    
+    if (Score > 0) 
+    {
+        float Bonus = Score * BOARD_WIN_BONUS;
+        Res = IF (BOARD_WIN_BASE + Bonus > BOARD_WIN)
+            THEN BOARD_WIN ELSE (BOARD_WIN_BASE + Bonus);
+    }
+    else if (Score < 0)
+    {
+        float Penalty = Score * BOARD_LOSS_PENALTY;
+        Res = IF (BOARD_LOSS_BASE + Penalty < BOARD_LOSS)
+            THEN BOARD_LOSS ELSE (BOARD_LOSS_BASE + Penalty);
+    }
+    else
+    {
+        Res = BOARD_DRAW;
+    } 
 
     return Res;
 }

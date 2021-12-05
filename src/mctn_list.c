@@ -20,7 +20,6 @@ void mctn_list_free(tMctnList *pList)
     if (pList->pItems ISNOT NULL)
     {
         free(pList->pItems);
-        pList->pItems = NULL;
     }
 
     pList->Size = 0;
