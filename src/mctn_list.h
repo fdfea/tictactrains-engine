@@ -20,8 +20,8 @@ MctnList
 {
     tMctn *pItems;
     uint8_t Size;
-
-} tMctnList;
+}
+tMctnList;
 
 void mctn_list_init(tMctnList *pList);
 void mctn_list_free(tMctnList *pList);

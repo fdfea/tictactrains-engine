@@ -22,12 +22,12 @@ void BitReset64(uint64_t *pMask, tIndex Index)
 
 tSize BitPopCount64(uint64_t Mask)
 {
-    return (tSize) __builtin_popcountll(Mask);
+    return __builtin_popcountll(Mask);
 }
 
 tIndex BitLzCount64(uint64_t Mask)
 {
-    return (tIndex) __builtin_ctzll(Mask);
+    return __builtin_ctzll(Mask);
 }
 
 tIndex BitKthSetIndex64(uint64_t Mask, uint64_t Rank)
@@ -54,11 +54,11 @@ tIndex BitKthSetIndex64(uint64_t Mask, uint64_t Rank)
     Rank -= (E & ((E - Rank) >> 8));
     E = (Mask >> (S - 1)) & 0x1;
     S -= ((E - Rank) & 256) >> 8;
-    return (tIndex) (S - 1);
+    return S - 1;
 }
 
 tIndex BitScanRandom64(uint64_t Mask, tRandom *pRand)
 {
-    uint64_t Rank = (rand_next(pRand) % BitPopCount64(Mask))+1;
+    uint64_t Rank = (rand_next(pRand) % BitPopCount64(Mask)) + 1;
     return BitKthSetIndex64(Mask, Rank);
 }

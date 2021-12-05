@@ -111,7 +111,7 @@ char *mctn_string(tMctn *pNode)
         tMctn *pChild = mctn_list_get(&pNode->Children, i);
         pId = board_index_id(board_last_move_index(&pChild->State));
 
-        float Eval = pChild->Visits > 0 ? pChild->Score/pChild->Visits : 0.0f;
+        float Eval = IF (pChild->Visits > 0) THEN pChild->Score/pChild->Visits ELSE 0.0f;
         
         pStr += sprintf(pStr, "%s: %0.2f @ %.2f/%d ** %d Nodes ** %3.3e UCT\n", 
             pId, Eval, pChild->Score, pChild->Visits, mctn_size(pChild), 
@@ -141,7 +141,7 @@ static uint32_t mctn_size(tMctn *pNode)
 
 static float UCT(tVisits ParentVisits, tVisits NodeVisits, float NodeScore)
 {
-    return (NodeVisits == 0) 
-        ? FLT_MAX 
-        : (NodeScore/NodeVisits) + sqrtf(2*logf(ParentVisits)/NodeVisits);
+    return IF (NodeVisits == 0)
+        THEN FLT_MAX
+        ELSE (NodeScore/NodeVisits) + sqrtf(2*logf(ParentVisits)/NodeVisits);
 }

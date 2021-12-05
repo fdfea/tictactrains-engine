@@ -29,7 +29,6 @@ void vector_free(tVector *pVector)
     if (pVector->ppItems ISNOT NULL)
     {
         free(pVector->ppItems);
-        pVector->ppItems = NULL;
     }
 
     pVector->Size = 0;

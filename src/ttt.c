@@ -57,7 +57,6 @@ int main(void)
     pBoardStr = board_string(&Game.Board);
     printf("%s\n\n", pBoardStr);
     free(pBoardStr);
-    pBoardStr = NULL;
 
     char (*pId)[BOARD_ID_STR_LEN] = malloc(sizeof(char)*BOARD_ID_STR_LEN);
     if (pId IS NULL)
@@ -101,15 +100,12 @@ int main(void)
                 {
                     int c; 
                     while ((c = getchar()) != '\n' AND c != EOF);
-                    
-                    //add parsing for special commands
-                    //show simulations or lines, quit, etc.
 
                     if (board_id_valid(pId)) 
                     {
                         Index = board_id_index(pId);
 
-                        if (BitTest64(Indices, (tIndex) Index))
+                        if (BitTest64(Indices, Index))
                         {
                             break;
                         }
@@ -124,7 +120,6 @@ int main(void)
             pMctsStr = mctn_string(Game.Mcts.pRoot);
             printf("BEFORE SHIFT\n%s\n", pMctsStr);
             free(pMctsStr);
-            pMctsStr = NULL;
 
             float Eval = mcts_evaluate(&Game.Mcts);
             if (Eval > -FLT_MAX) printf("Eval: %.2f\n\n", Eval);
@@ -139,7 +134,6 @@ int main(void)
             pMctsStr = mctn_string(Game.Mcts.pRoot);
             printf("AFTER SHIFT\n%s\n", pMctsStr);
             free(pMctsStr);
-            pMctsStr = NULL;
 
             float Eval = mcts_evaluate(&Game.Mcts);
             if (Eval > -FLT_MAX) printf("Eval: %.2f\n\n", Eval);
@@ -149,14 +143,11 @@ int main(void)
         pMoves = ttt_get_moves(&Game, &MovesSize);
         pMovesStr = rules_moves_string(&Game.Rules, pMoves, MovesSize);
         free(pMoves);
-        pMoves = NULL;
         printf("%s\n", pMovesStr);
         free(pMovesStr);
-        pMovesStr = NULL;
         pBoardStr = board_string(&Game.Board);
         printf("%s\n\n", pBoardStr);
         free(pBoardStr);
-        pBoardStr = NULL;
     }
 
     int Score = ttt_get_score(&Game);
@@ -267,8 +258,8 @@ int ttt_give_move(tTTT *pGame, int Index)
     }
 
     bool Player = rules_player(&pGame->Rules, &pGame->Board);
-    pGame->Moves[board_move(&pGame->Board)] = (tIndex) Index;
-    board_make_move(&pGame->Board, (tIndex) Index, Player);
+    pGame->Moves[board_move(&pGame->Board)] = Index;
+    board_make_move(&pGame->Board, Index, Player);
     mcts_give_state(&pGame->Mcts, &pGame->Board);
 
 Error:

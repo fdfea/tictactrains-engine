@@ -102,7 +102,7 @@ char *rules_moves_string(tRules *pRules, int *pMoves, int Size)
 
     for (tIndex i = 0; i < Size; ++i)
     {
-        tIndex Index = (tIndex) pMoves[i];
+        tIndex Index = pMoves[i];
         char *pId = board_index_id(Index);
 
         if (rules_index_player(pRules, i) AND NOT StartedMove)
