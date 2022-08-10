@@ -8,7 +8,7 @@ static const char *DEBUG_LABEL_INFO     = "[INFO] ";
 static const char *DEBUG_LABEL_WARN     = "[WARN] ";
 static const char *DEBUG_LABEL_ERROR    = "[ERROR] ";
 
-static inline const char *debug_label(eDebugLevel Level);
+static const char *debug_label(eDebugLevel Level);
 
 void debug_printf(eDebugLevel Level, const char *Format, ...)
 {
@@ -21,7 +21,7 @@ void debug_printf(eDebugLevel Level, const char *Format, ...)
     va_end(Args);
 }
 
-static inline const char *debug_label(eDebugLevel Level)
+static const char *debug_label(eDebugLevel Level)
 {
     switch (Level)
     {

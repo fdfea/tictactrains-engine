@@ -12,11 +12,11 @@
 #include "types.h"
 #include "util.h"
 
-static const uint64_t RULES_PLAYER_MASK = 0x8000000000000000ULL;
+#define RULES_PLAYER_MASK   0x8000000000000000ULL
 
-static void rules_by_type(tRules *pRules, eRulesType RulesType);
-static void rules_random_move(tRules *pRules, tBoard *pBoard, tRandom* pRand);
+static uint64_t rules_policy(tRules *pRules, tBoard *pBoard);
 static bool rules_index_player(tRules *pRules, tIndex Index);
+static void rules_by_type(tRules *pRules, eRulesType RulesType);
 
 void rules_init(tRules *pRules, tRulesConfig *pConfig)
 {
@@ -28,75 +28,61 @@ void rules_config_init(tRulesConfig *pConfig)
     pConfig->RulesType = RULES_CLASSICAL;
 }
 
-uint64_t rules_policy(tRules *pRules, tBoard *pBoard)
+uint64_t rules_indices(tRules *pRules, tBoard *pBoard)
 {
-    uint64_t Res = 0ULL;
-
-    if (board_finished(pBoard))
-    {
-        Res = -EINVAL;
-        dbg_printf(DEBUG_LEVEL_ERROR, "Game is finshed\n");
-        goto Error;
-    }
-
-    Res = pRules->MovePolicies[board_move(pBoard)];
-
-Error:
-    return Res;
+    return rules_policy(pRules, pBoard) & board_empty_indices(pBoard, true);
 }
 
 bool rules_player(tRules *pRules, tBoard *pBoard)
 {
-    return (rules_policy(pRules, pBoard) & RULES_PLAYER_MASK) != 0ULL;
+    return NOT BitEmpty64(rules_policy(pRules, pBoard) & RULES_PLAYER_MASK);
 }
 
 bool rules_prev_player(tRules *pRules, tBoard *pBoard)
 {
+    bool Player = false;
     tSize Move = board_move(pBoard);
-    eMovePolicy Policy = IF (Move > 0) THEN pRules->MovePolicies[Move-1] ELSE 0ULL;
 
-    return (Policy & RULES_PLAYER_MASK) != 0ULL;
+    if (Move > 0)
+    {
+        Player = NOT BitEmpty64(pRules->MovePolicies[Move-1] & RULES_PLAYER_MASK);
+    }
+
+    return Player;
 }
 
 void rules_next_states(tRules *pRules, tBoard *pBoard, tVector *pVector)
 {
-    uint64_t Policy = rules_policy(pRules, pBoard);
-    uint64_t Indices = board_valid_indices(pBoard, Policy, true);
+    uint64_t Indices = rules_indices(pRules, pBoard);
     bool Player = rules_player(pRules, pBoard);
 
-    while (Indices != 0ULL) 
+    while (NOT BitEmpty64(Indices)) 
     {
-        uint64_t Tmp = Indices & -Indices;
-        tIndex Index = BitLzCount64(Tmp);
-        tBoard *pBoardCopy = malloc(sizeof(tBoard));
+        tIndex Index = BitLzCount64(Indices);
+        tBoard *pBoardCopy = emalloc(sizeof(tBoard));
 
         board_copy(pBoardCopy, pBoard);
-        board_make_move(pBoardCopy, Index, Player);
+        board_advance(pBoardCopy, Index, Player);
         vector_add(pVector, pBoardCopy);
 
-        Indices ^= Tmp;
+        BitResetLsb64(&Indices, Index);
     }
 }
 
 void rules_simulate_playout(tRules *pRules, tBoard *pBoard, tRandom *pRand)
 {
-    while (NOT board_finished(pBoard)) 
+    while (NOT board_finished(pBoard))
     {
-        rules_random_move(pRules, pBoard, pRand);
+        uint64_t Indices = rules_indices(pRules, pBoard);
+        tIndex Index = BitScanRandom64(Indices, pRand);
+
+        board_advance(pBoard, Index, rules_player(pRules, pBoard));
     }
 }
 
 char *rules_moves_string(tRules *pRules, int *pMoves, int Size)
 {
-    char *Str = malloc(sizeof(char)*RULES_MOVES_STR_LEN);
-    if (Str IS NULL)
-    {
-        dbg_printf(DEBUG_LEVEL_ERROR, "No memory available\n");
-        goto Error;
-    }
-
-    char *pBegin = Str;
-
+    char *Str = emalloc(sizeof(char)*RULES_MOVES_STR_LEN), *pBegin = Str;
     tSize Move = 1;
     bool StartedMove = false;
 
@@ -141,18 +127,28 @@ Error:
     return Str;
 }
 
-static void rules_random_move(tRules *pRules, tBoard *pBoard, tRandom* pRand)
+static uint64_t rules_policy(tRules *pRules, tBoard *pBoard)
 {
-    uint64_t Policy = rules_policy(pRules, pBoard);
-    uint64_t ValidIndices = board_valid_indices(pBoard, Policy, true);
-    tIndex RandIndex = BitScanRandom64(ValidIndices, pRand);
+    uint64_t Res = 0ULL;
 
-    board_make_move(pBoard, RandIndex, rules_player(pRules, pBoard));
+    if (board_finished(pBoard))
+    {
+        Res = -EINVAL;
+        dbg_printf(DEBUG_LEVEL_ERROR, "Game is finshed\n");
+        goto Error;
+    }
+    else
+    {
+        Res = pRules->MovePolicies[board_move(pBoard)];
+    }
+
+Error:
+    return Res;
 }
 
 static bool rules_index_player(tRules *pRules, tIndex Index)
 {
-    bool Res = false;
+    bool Player = false;
 
     if (NOT board_index_valid(Index))
     {
@@ -160,41 +156,35 @@ static bool rules_index_player(tRules *pRules, tIndex Index)
         goto Error;
     }
 
-    Res = pRules->MovePolicies[Index] & RULES_PLAYER_MASK;
+    Player = pRules->MovePolicies[Index] & RULES_PLAYER_MASK;
 
 Error:
-    return Res;
+    return Player;
 }
 
 static void rules_by_type(tRules *pRules, eRulesType RulesType)
 {
-    eMovePolicy MovePolicies[ROWS*COLUMNS];
-    size_t PoliciesSize = ROWS*COLUMNS*sizeof(eMovePolicy);
-
     switch (RulesType)
     {
         case RULES_CLASSICAL:
         {
-            memcpy(&MovePolicies, &RulesClassical, PoliciesSize);
+            memcpy(&pRules->MovePolicies, &RulesClassical, sizeof(pRules->MovePolicies));
             break;
         }
         case RULES_MODERN:
         {
-            memcpy(&MovePolicies, &RulesModern, PoliciesSize);
+            memcpy(&pRules->MovePolicies, &RulesModern, sizeof(pRules->MovePolicies));
             break;
         }
         case RULES_EXPERIMENTAL:
         {
-            memcpy(&MovePolicies, &RulesExperimental, PoliciesSize);
+            memcpy(&pRules->MovePolicies, &RulesExperimental, sizeof(pRules->MovePolicies));
             break;
         }
         default: 
         {
-            dbg_printf(DEBUG_LEVEL_WARN, "Invalid rules type\n");
-            memcpy(&MovePolicies, &RulesClassical, PoliciesSize);
+            dbg_printf(DEBUG_LEVEL_ERROR, "Invalid rules type\n");
             break;
         }
     }
-
-    memcpy(&pRules->MovePolicies, &MovePolicies, PoliciesSize);
 }

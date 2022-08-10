@@ -20,8 +20,9 @@ tTTT;
 
 int ttt_init(tTTT *pGame, tConfig *pConfig);
 void ttt_free(tTTT *pGame);
-int ttt_give_move(tTTT* pGame, int Index);
+int ttt_get_player_move(tTTT *pGame, bool ComputerPlaying);
 int ttt_get_ai_move(tTTT *pGame);
+int ttt_give_move(tTTT *pGame, int Index);
 bool ttt_get_player(tTTT *pGame);
 bool ttt_is_finished(tTTT *pGame);
 int ttt_get_score(tTTT *pGame);

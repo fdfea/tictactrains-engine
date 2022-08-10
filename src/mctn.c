@@ -12,12 +12,23 @@
 static uint32_t mctn_size(tMctn *pNode);
 static float UCT(tVisits ParentVisits, tVisits NodeVisits, float NodeScore);
 
-void mctn_init(tMctn *pNode, tBoard *pBoard)
+int mctn_init(tMctn *pNode, tBoard *pBoard)
 {
+    int Res = 0;
+
     board_copy(&pNode->State, pBoard);
-    mctn_list_init(&pNode->Children);
+
+    Res = mctn_list_init(&pNode->Children);
+    if (Res < 0)
+    {
+        goto Error;
+    }
+
     pNode->Visits = 0;
     pNode->Score = 0.0f;
+
+Error:
+    return Res;
 }
 
 void mctn_free(tMctn *pNode)
@@ -89,17 +100,7 @@ tMctn *mctn_most_visited_child(tMctn *pNode)
 
 char *mctn_string(tMctn *pNode)
 {
-    char *pStr = NULL;
-
-    pStr = malloc(sizeof(char)*MCTN_STR_LEN);
-    if (pStr IS NULL)
-    {
-        dbg_printf(DEBUG_LEVEL_ERROR, "No memory available\n");
-        goto Error;
-    }
-
-    char *pBegin = pStr, *pId = NULL;
-
+    char *pStr = emalloc(sizeof(char)*MCTN_STR_LEN), *pBegin = pStr, *pId = NULL;
     tVisits Visits = pNode->Visits;
 
     pStr += sprintf(pStr, "Tree size: %d, Root score: %.2f/%d\n", 

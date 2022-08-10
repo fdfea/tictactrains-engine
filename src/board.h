@@ -14,9 +14,13 @@
 #define BOARD_STR_LEN       190
 
 typedef struct Board
+#ifdef PACKED
+__attribute__((packed))
+#endif
 {
     uint64_t Data;
-    uint64_t Valid;
+    uint64_t Empty;
+    uint64_t Neighbors;
 }
 tBoard;
 
@@ -30,11 +34,11 @@ eScoringAlgorithm;
 void board_init(tBoard *pBoard);
 void board_copy(tBoard *pBoard, tBoard *pB);
 bool board_equals(tBoard *pBoard, tBoard *pB);
-void board_make_move(tBoard *pBoard, tIndex Index, bool Player);
+void board_advance(tBoard *pBoard, tIndex Index, bool Player);
 bool board_finished(tBoard *pBoard);
 tSize board_move(tBoard *pBoard);
+uint64_t board_empty_indices(tBoard *pBoard, bool OnlyNeighbors);
 tIndex board_last_move_index(tBoard *pBoard);
-uint64_t board_valid_indices(tBoard *pBoard, uint64_t Policy, bool OnlyAdjacent);
 tScore board_score(tBoard *pBoard, eScoringAlgorithm Algorithm);
 char *board_string(tBoard *pBoard);
 char board_index_char(tBoard *pBoard, tIndex Index);

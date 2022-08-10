@@ -27,7 +27,11 @@ int main(void)
     tTTT Game;
     tConfig Config;
     
-    config_init(&Config);
+    Res = config_init(&Config);
+    if (Res < 0)
+    {
+        goto Error;
+    }
 
     Res = config_load(&Config);
     if (Res < 0)
@@ -38,13 +42,8 @@ int main(void)
     Res = ttt_init(&Game, &Config);
     if (Res < 0)
     {
-        goto Error;
+        goto FreeConfig;
     }
-
-    bool ComputerPlaying = Config.ComputerPlaying;
-    bool ComputerPlayer = Config.ComputerPlayer;
-
-    config_free(&Config);
 
     char *pBoardStr = NULL;
     char *pMovesStr = NULL;
@@ -58,60 +57,30 @@ int main(void)
     printf("%s\n\n", pBoardStr);
     free(pBoardStr);
 
-    char (*pId)[BOARD_ID_STR_LEN] = malloc(sizeof(char)*BOARD_ID_STR_LEN);
-    if (pId IS NULL)
-    {
-        Res = -ENOMEM;
-        dbg_printf(DEBUG_LEVEL_ERROR, "No memory available\n");
-        goto Error;
-    }
-
     while (NOT board_finished(&Game.Board))
     {
         int Index;
         bool Player = ttt_get_player(&Game);
 
-        if (ComputerPlaying AND Player == ComputerPlayer) 
+        if (Config.ComputerPlaying AND Player == Config.ComputerPlayer) 
         {
-            Index = ttt_get_ai_move(&Game);
-            if (Index < 0)
+            Res = ttt_get_ai_move(&Game);
+            if (Res < 0)
             {
-                Res = Index;
-                goto Error;
+                goto FreeGame;
             }
+
+            Index = Res;
         } 
         else
         {
-            uint64_t Policy = rules_policy(&Game.Rules, &Game.Board);
-            uint64_t Indices = board_valid_indices(&Game.Board, Policy, false);
-
-            while (true)
+            Res = ttt_get_player_move(&Game, Config.ComputerPlaying);
+            if (Res < 0)
             {
-                if (ComputerPlaying)
-                {
-                    printf("Enter move: ");
-                }
-                else
-                {
-                    printf("Enter move (Player %d): ", (Player ? 1 : 2));
-                }
-
-                if (fgets(*pId, BOARD_ID_STR_LEN, stdin) ISNOT NULL)
-                {
-                    int c; 
-                    while ((c = getchar()) != '\n' AND c != EOF);
-
-                    if (board_id_valid(pId)) 
-                    {
-                        Index = board_id_index(pId);
-
-                        if (BitTest64(Indices, Index))
-                        {
-                            break;
-                        }
-                    }
-                }
+                goto FreeGame;
             }
+
+            Index = Res;
         }
 
 #ifdef STATS
@@ -153,9 +122,10 @@ int main(void)
     int Score = ttt_get_score(&Game);
     printf("Score: %d\n", Score);
 
-    free(pId);
+FreeGame:
     ttt_free(&Game);
-
+FreeConfig:
+    config_free(&Config);
 Error:
     return Res;
 }
@@ -189,25 +159,47 @@ void ttt_free(tTTT *pGame)
     mcts_free(&pGame->Mcts);
 }
 
-static int ttt_load_moves(tTTT *pGame, tVector *pMoves)
+int ttt_get_player_move(tTTT *pGame, bool ComputerPlaying)
 {
     int Res = 0;
 
-    tBoard BoardCopy;
-    board_init(&BoardCopy);
-    board_copy(&BoardCopy, &pGame->Board);
+    int Index;
+    bool Player = ttt_get_player(pGame);
+    uint64_t Indices = rules_indices(&pGame->Rules, &pGame->Board);
 
-    for (tIndex i = 0; i < vector_size(pMoves); ++i)
+    char (*pId)[BOARD_ID_STR_LEN] = emalloc(sizeof(char)*BOARD_ID_STR_LEN);
+
+    while (true)
     {
-        tIndex Move = *((tIndex *) vector_get(pMoves, i));
-        Res = ttt_give_move(pGame, Move);
-        if (Res < 0)
+        if (ComputerPlaying)
         {
-            dbg_printf(DEBUG_LEVEL_ERROR, "Failed to load moves\n");
-            board_copy(&pGame->Board, &BoardCopy);
-            goto Error;
+            printf("Enter move: ");
+        }
+        else
+        {
+            printf("Enter move (Player %d): ", (Player ? 1 : 2));
+        }
+
+        if (fgets(*pId, BOARD_ID_STR_LEN, stdin) ISNOT NULL)
+        {
+            int c; 
+            while ((c = getchar()) != '\n' AND c != EOF);
+
+            if (board_id_valid(pId)) 
+            {
+                Index = board_id_index(pId);
+
+                if (BitTest64(Indices, Index))
+                {
+                    break;
+                }
+            }
         }
     }
+
+    Res = Index;
+
+    free(pId);
 
 Error:
     return Res;
@@ -235,12 +227,11 @@ int ttt_get_ai_move(tTTT *pGame)
 
         Index = board_last_move_index(pNextState);
     }
-    goto Success;
+
+    Res = Index;
 
 Error:
-    Index = Res;
-Success:
-    return Index;
+    return Res;
 }
 
 int ttt_give_move(tTTT *pGame, int Index)
@@ -259,7 +250,7 @@ int ttt_give_move(tTTT *pGame, int Index)
 
     bool Player = rules_player(&pGame->Rules, &pGame->Board);
     pGame->Moves[board_move(&pGame->Board)] = Index;
-    board_make_move(&pGame->Board, Index, Player);
+    board_advance(&pGame->Board, Index, Player);
     mcts_give_state(&pGame->Mcts, &pGame->Board);
 
 Error:
@@ -283,16 +274,9 @@ int ttt_get_score(tTTT *pGame)
 
 int *ttt_get_moves(tTTT *pGame, int *pSize)
 {
-    int *pMoves = NULL;
     *pSize = (int) board_move(&pGame->Board);
 
-    pMoves = malloc(*pSize*sizeof(int));
-    if (pMoves IS NULL)
-    {
-        dbg_printf(DEBUG_LEVEL_ERROR, "No memory available\n");
-        *pSize = 0;
-        goto Error;
-    }
+    int *pMoves = emalloc(*pSize * sizeof(int));
 
     for (tIndex i = 0; i < *pSize; ++i)
     {
@@ -301,4 +285,28 @@ int *ttt_get_moves(tTTT *pGame, int *pSize)
 
 Error:
     return pMoves;
+}
+
+static int ttt_load_moves(tTTT *pGame, tVector *pMoves)
+{
+    int Res = 0;
+
+    tBoard BoardCopy;
+    board_init(&BoardCopy);
+    board_copy(&BoardCopy, &pGame->Board);
+
+    for (tIndex i = 0; i < vector_size(pMoves); ++i)
+    {
+        tIndex Index = *((tIndex *) vector_get(pMoves, i));
+        Res = ttt_give_move(pGame, Index);
+        if (Res < 0)
+        {
+            dbg_printf(DEBUG_LEVEL_ERROR, "Failed to load moves\n");
+            board_copy(&pGame->Board, &BoardCopy);
+            goto Error;
+        }
+    }
+
+Error:
+    return Res;
 }

@@ -16,7 +16,7 @@ typedef struct Config
 } 
 tConfig;
 
-void config_init(tConfig *pConfig);
+int config_init(tConfig *pConfig);
 void config_free(tConfig *pConfig);
 int config_load(tConfig *pConfig);
 

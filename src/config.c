@@ -27,13 +27,19 @@
 
 static int config_parse_moves(tVector *pMoves, char *pMovesStr);
 
-void config_init(tConfig *pConfig)
+int config_init(tConfig *pConfig)
 {
+    int Res = 0;
+
     pConfig->ComputerPlaying = false;
     pConfig->ComputerPlayer = false;
+
     rules_config_init(&pConfig->RulesConfig);
     mcts_config_init(&pConfig->MctsConfig);
-    vector_init(&pConfig->StartPosition);
+    
+    Res = vector_init(&pConfig->StartPosition);
+
+    return Res;
 }
 
 void config_free(tConfig *pConfig)
@@ -273,14 +279,9 @@ static int config_parse_moves(tVector *pMoves, char *pMovesStr)
             goto Error;
         }
 
-        pMoveIndex = malloc(sizeof(tIndex));
-        if (pMoveIndex IS NULL)
-        {
-            Res = -ENOMEM;
-            goto Error;
-        }
-
+        pMoveIndex = emalloc(sizeof(tIndex));
         *pMoveIndex = MoveIndex;
+
         vector_add(pMoves, pMoveIndex);
         
         Index += 2;

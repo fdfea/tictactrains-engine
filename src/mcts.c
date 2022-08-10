@@ -13,21 +13,21 @@
 #include "board.h"
 #include "debug.h"
 #include "mctn.h"
-#include "mctn_list.h"
 #include "mcts.h"
 #include "rules.h"
 #include "random.h"
 #include "types.h"
 #include "util.h"
+#include "vector.h"
 
-static const float BOARD_WIN    = 1.0f;
-static const float BOARD_DRAW   = 0.5f;
-static const float BOARD_LOSS   = 0.0f;
+#define BOARD_WIN   1.0f
+#define BOARD_DRAW  0.5f
+#define BOARD_LOSS  0.0f
 
-static const float BOARD_WIN_BASE       = 0.90f;
-static const float BOARD_WIN_BONUS      = 0.025f;
-static const float BOARD_LOSS_BASE      = 0.10f;
-static const float BOARD_LOSS_PENALTY   = 0.025f;
+#define BOARD_WIN_BASE      0.90f
+#define BOARD_WIN_BONUS     0.025f
+#define BOARD_LOSS_BASE     0.10f
+#define BOARD_LOSS_PENALTY  0.025f
 
 static int mcts_expand_node(tMcts *pMcts, tMctn *pNode);
 static float mcts_simulation(tMcts *pMcts, tMctn *pNode);
@@ -42,21 +42,20 @@ int mcts_init(tMcts *pMcts, tRules *pRules, tBoard *pState, tMctsConfig *pConfig
 {
     int Res = 0;
 
-    pMcts->pRoot = malloc(sizeof(tMctn));
-    if (pMcts->pRoot IS NULL)
-    {
-        Res = -ENOMEM;
-        dbg_printf(DEBUG_LEVEL_ERROR, "No memory available\n");
-        goto Error;
-    }
-
-    mctn_init(pMcts->pRoot, pState);
+    pMcts->pRoot = emalloc(sizeof(tMctn));
     pMcts->pRules = pRules;
-    rand_init(&pMcts->Rand);
     pMcts->Player = rules_player(pRules, pState);
     pMcts->Config = *pConfig;
 
-Error: 
+    Res = mctn_init(pMcts->pRoot, pState);
+    if (Res < 0)
+    {
+        goto Error;
+    }
+
+    rand_init(&pMcts->Rand);
+
+Error:
     return Res;
 }
 
