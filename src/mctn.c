@@ -7,40 +7,28 @@
 #include "board.h"
 #include "debug.h"
 #include "mctn.h"
+#include "mctnlist.h"
 #include "util.h"
 
 static uint32_t mctn_size(tMctn *pNode);
-static float UCT(tVisits ParentVisits, tVisits NodeVisits, float NodeScore);
+static float uct(tVisits ParentVisits, tVisits NodeVisits, float NodeScore);
 
-int mctn_init(tMctn *pNode, tBoard *pBoard)
+void mctn_init(tMctn *pNode, tBoard *pBoard)
 {
-    int Res = 0;
-
     board_copy(&pNode->State, pBoard);
-
-    Res = mctn_list_init(&pNode->Children);
-    if (Res < 0)
-    {
-        goto Error;
-    }
 
     pNode->Visits = 0;
     pNode->Score = 0.0f;
-
-Error:
-    return Res;
 }
 
 void mctn_free(tMctn *pNode)
 {
-    for (tIndex i = 0; i < mctn_list_size(&pNode->Children); ++i)
-    {
-        tMctn *pChild = mctn_list_get(&pNode->Children, i);
-        mctn_free(pChild);
-        pChild = NULL;
-    }
+    mctnlist_free(&pNode->Children);
+}
 
-    mctn_list_free(&pNode->Children);
+void mctn_copy(tMctn *pNode, tMctn *pN)
+{
+    *pNode = *pN;
 }
 
 void mctn_update(tMctn *pNode, float Score)
@@ -49,10 +37,9 @@ void mctn_update(tMctn *pNode, float Score)
     pNode->Visits++;
 }
 
-int mctn_expand(tMctn *pNode, tVector *pNextStates)
+void mctn_expand(tMctn *pNode, tBoard *pStates, tSize Size)
 {
-    int Res = mctn_list_expand(&pNode->Children, pNextStates);
-    return Res;
+    mctnlist_init(&pNode->Children, pStates, Size);
 }
 
 bool mctn_equals(tMctn *pNode, tMctn *pN)
@@ -62,40 +49,37 @@ bool mctn_equals(tMctn *pNode, tMctn *pN)
 
 tMctn *mctn_random_child(tMctn *pNode, tRandom *pRand)
 {
-    tIndex RandIndex = rand_next(pRand) % mctn_list_size(&pNode->Children);
-    return mctn_list_get(&pNode->Children, RandIndex);
-}
+    tSize Size = mctnlist_size(&pNode->Children);
 
-tMctn *mctn_best_child_uct(tMctn *pNode)
-{
-    float ChildUCT, BestUCT = -FLT_MAX;
-    tMctn *BestNode = NULL;
-
-    for (tIndex i = 0; i < mctn_list_size(&pNode->Children); ++i)
-    {
-        tMctn *pChild = mctn_list_get(&pNode->Children, i);
-        ChildUCT = UCT(pNode->Visits, pChild->Visits, pChild->Score);
-
-        SET_IF_GREATER_EQ_W_EXTRA(ChildUCT, BestUCT, pChild, BestNode);
-    }
-
-    return BestNode;
+    return IF (Size > 0) THEN mctnlist_get(&pNode->Children, rand_next(pRand) % Size) ELSE NULL;
 }
 
 tMctn *mctn_most_visited_child(tMctn *pNode)
 {
-    tVisits ChildVisits, MostVisits = 0;
-    tMctn* BestNode = NULL;
+    tMctn *pChild, *pWinner = NULL;
+    tVisits MaxVisits = 0;
 
-    for (tIndex i = 0; i < mctn_list_size(&pNode->Children); ++i)
+    for (tIndex i = 0; i < mctnlist_size(&pNode->Children); ++i)
     {
-        tMctn *pChild = mctn_list_get(&pNode->Children, i);
-        ChildVisits = pChild->Visits;
-
-        SET_IF_GREATER_EQ_W_EXTRA(ChildVisits, MostVisits, pChild, BestNode);
+        pChild = mctnlist_get(&pNode->Children, i);
+        SET_IF_GREATER_EQ_W_EXTRA(pChild->Visits, MaxVisits, pChild, pWinner);
     }
 
-    return BestNode;
+    return pWinner;
+}
+
+tMctn *mctn_best_child_uct(tMctn *pNode)
+{
+    tMctn *pChild, *pWinner = NULL;
+    float MaxUct = -FLT_MAX;
+
+    for (tIndex i = 0; i < mctnlist_size(&pNode->Children); ++i)
+    {
+        pChild = mctnlist_get(&pNode->Children, i);
+        SET_IF_GREATER_EQ_W_EXTRA(uct(pNode->Visits, pChild->Visits, pChild->Score), MaxUct, pChild, pWinner);
+    }
+
+    return pWinner;
 }
 
 char *mctn_string(tMctn *pNode)
@@ -106,10 +90,10 @@ char *mctn_string(tMctn *pNode)
     pStr += sprintf(pStr, "Tree size: %d, Root score: %.2f/%d\n", 
         mctn_size(pNode), pNode->Score, Visits);
 
-    for (tIndex i = 0; i < mctn_list_size(&pNode->Children); ++i)
+    for (tIndex i = 0; i < mctnlist_size(&pNode->Children); ++i)
     {
 
-        tMctn *pChild = mctn_list_get(&pNode->Children, i);
+        tMctn *pChild = mctnlist_get(&pNode->Children, i);
         pId = board_index_id(board_last_move_index(&pChild->State));
 
         float Eval = IF (pChild->Visits > 0) THEN pChild->Score/pChild->Visits ELSE 0.0f;
@@ -132,17 +116,15 @@ static uint32_t mctn_size(tMctn *pNode)
 {
     uint32_t Size = 1;
 
-    for (tIndex i = 0; i < mctn_list_size(&pNode->Children); ++i)
+    for (tIndex i = 0; i < mctnlist_size(&pNode->Children); ++i)
     {
-        Size += mctn_size(mctn_list_get(&pNode->Children, i));
+        Size += mctn_size(mctnlist_get(&pNode->Children, i));
     }
 
     return Size;
 }
 
-static float UCT(tVisits ParentVisits, tVisits NodeVisits, float NodeScore)
+static float uct(tVisits ParentVisits, tVisits Visits, float Score)
 {
-    return IF (NodeVisits == 0)
-        THEN FLT_MAX
-        ELSE (NodeScore/NodeVisits) + sqrtf(2*logf(ParentVisits)/NodeVisits);
+    return IF (Visits == 0) THEN FLT_MAX ELSE (Score/Visits) + sqrtf(2*logf(ParentVisits)/Visits);
 }

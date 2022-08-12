@@ -29,11 +29,6 @@ void BitReset64(uint64_t *pBits, tIndex Index)
     *pBits &= ~(1ULL << Index);
 }
 
-void BitResetLsb64(uint64_t *pBits)
-{
-    *pBits &= *pBits - 1;
-}
-
 tSize BitPopCount64(uint64_t Bits)
 {
     return __builtin_popcountll(Bits);

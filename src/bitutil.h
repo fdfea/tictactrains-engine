@@ -11,7 +11,6 @@ bool BitEmpty64(uint64_t Bits);
 bool BitTest64(uint64_t Bits, tIndex Index);
 void BitSet64(uint64_t *pBits, tIndex Index);
 void BitReset64(uint64_t *pBits, tIndex Index);
-void BitResetLsb64(uint64_t *pBits);
 tSize BitPopCount64(uint64_t Bits);
 tSize BitLzCount64(uint64_t Bits);
 tSize BitTzCount64(uint64_t Bits);

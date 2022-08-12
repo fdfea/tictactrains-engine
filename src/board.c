@@ -182,7 +182,7 @@ static tScore board_optimal_score(tBoard *pBoard)
 
     while (NOT BitEmpty64(NotEmpty))
     {
-        tIndex Index = BitLzCount64(NotEmpty);
+        tIndex Index = BitTzCount64(NotEmpty);
         uint64_t Checked = 0ULL;
         tSize ScoreSq = board_index_longest_path(pBoard, Index, Checked);
 
@@ -195,7 +195,7 @@ static tScore board_optimal_score(tBoard *pBoard)
             SET_IF_GREATER(ScoreSq, ScoreO);
         }
 
-        BitResetLsb64(&NotEmpty, Index);
+        BitReset64(&NotEmpty, Index);
     }
 
     return ScoreX - ScoreO;
@@ -229,7 +229,7 @@ static tScore board_quick_score(tBoard *pBoard)
 
     while (NOT BitEmpty64(NotChecked))
     {
-        tIndex Index = BitLzCount64(NotChecked);
+        tIndex Index = BitTzCount64(NotChecked);
         tSize Score = board_index_checked_path(pBoard, Index, 0ULL, &Checked);
 
         if (board_index_player(pBoard, Index))
@@ -241,7 +241,7 @@ static tScore board_quick_score(tBoard *pBoard)
             SET_IF_GREATER(Score, ScoreO);
         }
 
-        BitResetLsb64(&NotChecked, Index);
+        BitReset64(&NotChecked, Index);
     }
 
     return ScoreX - ScoreO;
@@ -320,7 +320,7 @@ static tSize board_index_longest_path(tBoard *pBoard, tIndex Index, uint64_t Che
 
     while (NOT BitEmpty64(AdjacentIndices))
     {
-        tIndex AdjIndex = BitLzCount64(AdjacentIndices);
+        tIndex AdjIndex = BitTzCount64(AdjacentIndices);
     
         if (board_index_traversable(pBoard, AdjIndex, Player, Checked))
         {
@@ -328,7 +328,7 @@ static tSize board_index_longest_path(tBoard *pBoard, tIndex Index, uint64_t Che
             SET_IF_GREATER(PathLen, MaxPathLen);           
         }
 
-        BitResetLsb64(&AdjacentIndices, AdjIndex);
+        BitReset64(&AdjacentIndices, AdjIndex);
     }
 
     return MaxPathLen;
@@ -345,7 +345,7 @@ static tSize board_index_checked_path(tBoard *pBoard, tIndex Index, uint64_t Che
 
     while (NOT BitEmpty64(AdjacentIndices))
     {
-        tIndex AdjIndex = BitLzCount64(AdjacentIndices);
+        tIndex AdjIndex = BitTzCount64(AdjacentIndices);
     
         if (board_index_traversable(pBoard, AdjIndex, Player, Checked))
         {
@@ -354,7 +354,7 @@ static tSize board_index_checked_path(tBoard *pBoard, tIndex Index, uint64_t Che
             SET_IF_GREATER_W_EXTRA(PathLen, MaxPathLen, Path, MaxPath);            
         }
 
-        BitResetLsb64(&AdjacentIndices);
+        BitReset64(&AdjacentIndices, AdjIndex);
     }
     
     *pPath |= MaxPath;
@@ -395,11 +395,11 @@ static tSize board_index_adjacent_count(uint64_t Data, tIndex Index)
 
     while (NOT BitEmpty64(AdjacentIndices))
     {
-        tIndex Index = BitLzCount64(AdjacentIndices);
+        tIndex Index = BitTzCount64(AdjacentIndices);
     
         if (BitTest64(Data, Index)) AdjacentCount++;
 
-        BitResetLsb64(&AdjacentIndices, Index);
+        BitReset64(&AdjacentIndices, Index);
     }
 
     return AdjacentCount;

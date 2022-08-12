@@ -43,30 +43,32 @@ bool rules_prev_player(tRules *pRules, tBoard *pBoard)
     bool Player = false;
     tSize Move = board_move(pBoard);
 
-    if (Move > 0)
-    {
-        Player = NOT BitEmpty64(pRules->MovePolicies[Move-1] & RULES_PLAYER_MASK);
-    }
+    if (Move > 0) Player = NOT BitEmpty64(pRules->MovePolicies[Move-1] & RULES_PLAYER_MASK);
 
     return Player;
 }
 
-void rules_next_states(tRules *pRules, tBoard *pBoard, tVector *pVector)
+tBoard *rules_next_states(tRules *pRules, tBoard *pBoard, tSize *pSize)
 {
     uint64_t Indices = rules_indices(pRules, pBoard);
     bool Player = rules_player(pRules, pBoard);
+    tSize Size = BitPopCount64(Indices);
+    tBoard *pStates = emalloc(Size * sizeof(tBoard));
 
     while (NOT BitEmpty64(Indices)) 
     {
         tIndex Index = BitLzCount64(Indices);
-        tBoard *pBoardCopy = emalloc(sizeof(tBoard));
+        tBoard *pState = &pStates[Index];
 
-        board_copy(pBoardCopy, pBoard);
-        board_advance(pBoardCopy, Index, Player);
-        vector_add(pVector, pBoardCopy);
+        board_copy(pState, pBoard);
+        board_advance(pState, Index, Player);
 
-        BitResetLsb64(&Indices, Index);
+        BitReset64(&Indices, Index);
     }
+
+    *pSize = Size;
+
+    return pStates;
 }
 
 void rules_simulate_playout(tRules *pRules, tBoard *pBoard, tRandom *pRand)
