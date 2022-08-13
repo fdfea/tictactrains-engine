@@ -4,7 +4,6 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "bitutil.h"
 #include "types.h"
 
 #define ROWS    7
@@ -34,7 +33,7 @@ eScoringAlgorithm;
 void board_init(tBoard *pBoard);
 void board_copy(tBoard *pBoard, tBoard *pB);
 bool board_equals(tBoard *pBoard, tBoard *pB);
-void board_advance(tBoard *pBoard, tIndex Index, bool Player);
+int board_advance(tBoard *pBoard, tIndex Index, bool Player);
 bool board_finished(tBoard *pBoard);
 tSize board_move(tBoard *pBoard);
 uint64_t board_empty_indices(tBoard *pBoard, bool OnlyNeighbors);

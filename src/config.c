@@ -18,7 +18,7 @@
 #define CONFIG_RULES_TYPE           "RULES_TYPE"
 #define CONFIG_SIMULATIONS          "SIMULATIONS"
 #define CONFIG_SCORING_ALGORITHM    "SCORING_ALGORITHM"
-#define CONFIG_START_POSITION       "STARTING_POSITION"
+#define CONFIG_STARTING_MOVES       "STARTING_MOVES"
 
 #define CONFIG_MAXLINE              128
 #define CONFIG_MAX_MOVES_STR_LEN    (ROWS*COLUMNS*2)
@@ -36,20 +36,20 @@ int config_init(tConfig *pConfig)
 
     rules_config_init(&pConfig->RulesConfig);
     mcts_config_init(&pConfig->MctsConfig);
-    
-    Res = vector_init(&pConfig->StartPosition);
+
+    Res = vector_init(&pConfig->StartingMoves);
 
     return Res;
 }
 
 void config_free(tConfig *pConfig)
 {
-    for (tIndex i = 0; i < vector_size(&pConfig->StartPosition); ++i)
+    for (tIndex i = 0; i < vector_size(&pConfig->StartingMoves); ++i)
     {
-        tIndex *pIndex = (tIndex *) vector_get(&pConfig->StartPosition, i);
-        free(pIndex);
+        free(vector_get(&pConfig->StartingMoves, i));
     }
-    vector_free(&pConfig->StartPosition);
+
+    vector_free(&pConfig->StartingMoves);
 }
 
 int config_load(tConfig *pConfig)
@@ -91,14 +91,15 @@ int config_load(tConfig *pConfig)
                 goto Error;
             }
 
-            if (NOT Found.StartPosition AND CONFIG_STRNCMP(pKey, CONFIG_START_POSITION))
+            if (NOT Found.StartPosition AND CONFIG_STRNCMP(pKey, CONFIG_STARTING_MOVES))
             {
-                Res = config_parse_moves(&pConfig->StartPosition, pValue);
+                Res = config_parse_moves(&pConfig->StartingMoves, pValue);
                 if (Res < 0)
                 {
                     Res = -EINVAL;
                     goto Error;
                 }
+
                 Found.StartPosition = true;
                 continue;
             }
@@ -126,6 +127,7 @@ int config_load(tConfig *pConfig)
                     Res = -EINVAL;
                     goto Error;
                 }
+
                 Found.ComputerPlaying = true;
             }
             else if (NOT Found.ComputerPlayer AND CONFIG_STRNCMP(pKey, CONFIG_COMPUTER_PLAYER))
@@ -143,6 +145,7 @@ int config_load(tConfig *pConfig)
                     Res = -EINVAL;
                     goto Error;
                 }
+
                 Found.ComputerPlayer = true;
             }
             else if (NOT Found.RulesType AND CONFIG_STRNCMP(pKey, CONFIG_RULES_TYPE))
@@ -170,6 +173,7 @@ int config_load(tConfig *pConfig)
                         goto Error;
                     }
                 }
+
                 Found.RulesType = true;
             }
             else if (NOT Found.Simulations AND CONFIG_STRNCMP(pKey, CONFIG_SIMULATIONS))
@@ -183,6 +187,7 @@ int config_load(tConfig *pConfig)
                     Res = -EINVAL;
                     goto Error;
                 }
+
                 Found.Simulations = true;
             }
             else if (NOT Found.ScoringAlgorithm AND CONFIG_STRNCMP(pKey, CONFIG_SCORING_ALGORITHM))
@@ -205,6 +210,7 @@ int config_load(tConfig *pConfig)
                         goto Error;
                     }
                 }
+
                 Found.ScoringAlgorithm = true;
             }
             else
@@ -230,7 +236,7 @@ int config_load(tConfig *pConfig)
     goto Success;
 
 Error:
-    fprintf(stderr, "[ERROR] Malformatted configuration at line %d\n", Line);
+    fprintf(stderr, "[ERROR] Cannot parse configuration at line %d\n", Line);
 
 Success:
     fclose(pFile);
@@ -287,6 +293,6 @@ static int config_parse_moves(tVector *pMoves, char *pMovesStr)
         Index += 2;
     }
 
-    Error:
-        return Res;
+Error:
+    return Res;
 }

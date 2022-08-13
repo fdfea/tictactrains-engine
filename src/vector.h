@@ -37,7 +37,7 @@ void *vector_get(tVector *pVector, tIndex Index);
 void *vector_take(tVector *pVector, tIndex Index);
 void *vector_get_random(tVector *pVector, tRandom *pRand);
 void *vector_take_random(tVector *pVector, tRandom *pRand);
-void *vector_set(tVector *pVector, void *pItem, tIndex Index);
+void *vector_set(tVector *pVector, tIndex Index, void *pItem);
 void vector_shuffle(tVector *pVector, tRandom *pRand);
 void vector_map(tVector *pVector, tMapFunction *pFunction);
 void vector_foreach(tVector *pVector, tEffectFunction *pFunction);

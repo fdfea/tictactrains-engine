@@ -1,13 +1,9 @@
-#include <limits.h>
 #include <stdbool.h>
 #include <stdint.h>
 
 #include "bitutil.h"
 #include "random.h"
 #include "types.h"
-#include "util.h"
-
-#define UINT64_INDEX_MAX    (sizeof(uint64_t) * CHAR_BIT - 1)
 
 bool BitEmpty64(uint64_t Bits)
 {

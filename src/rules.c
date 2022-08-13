@@ -16,11 +16,11 @@
 
 static uint64_t rules_policy(tRules *pRules, tBoard *pBoard);
 static bool rules_index_player(tRules *pRules, tIndex Index);
-static void rules_by_type(tRules *pRules, eRulesType RulesType);
+static void rules_load(tRules *pRules, eRulesType RulesType);
 
 void rules_init(tRules *pRules, tRulesConfig *pConfig)
 {
-    rules_by_type(pRules, pConfig->RulesType);
+    rules_load(pRules, pConfig->RulesType);
 }
 
 void rules_config_init(tRulesConfig *pConfig)
@@ -28,9 +28,9 @@ void rules_config_init(tRulesConfig *pConfig)
     pConfig->RulesType = RULES_CLASSICAL;
 }
 
-uint64_t rules_indices(tRules *pRules, tBoard *pBoard)
+uint64_t rules_indices(tRules *pRules, tBoard *pBoard, bool OnlyAdjacent)
 {
-    return rules_policy(pRules, pBoard) & board_empty_indices(pBoard, true);
+    return rules_policy(pRules, pBoard) & board_empty_indices(pBoard, OnlyAdjacent);
 }
 
 bool rules_player(tRules *pRules, tBoard *pBoard)
@@ -43,14 +43,17 @@ bool rules_prev_player(tRules *pRules, tBoard *pBoard)
     bool Player = false;
     tSize Move = board_move(pBoard);
 
-    if (Move > 0) Player = NOT BitEmpty64(pRules->MovePolicies[Move-1] & RULES_PLAYER_MASK);
+    if (Move > 0)
+    {
+        Player = NOT BitEmpty64(pRules->MovePolicies[Move-1] & RULES_PLAYER_MASK);
+    }
 
     return Player;
 }
 
-tBoard *rules_next_states(tRules *pRules, tBoard *pBoard, tSize *pSize)
+tBoard *rules_next_states(tRules *pRules, tBoard *pBoard, tSize *pSize, bool OnlyAdjacent)
 {
-    uint64_t Indices = rules_indices(pRules, pBoard);
+    uint64_t Indices = rules_indices(pRules, pBoard, OnlyAdjacent);
     bool Player = rules_player(pRules, pBoard);
     tSize Size = BitPopCount64(Indices);
     tBoard *pStates = emalloc(Size * sizeof(tBoard));
@@ -71,11 +74,11 @@ tBoard *rules_next_states(tRules *pRules, tBoard *pBoard, tSize *pSize)
     return pStates;
 }
 
-void rules_simulate_playout(tRules *pRules, tBoard *pBoard, tRandom *pRand)
+void rules_simulate_playout(tRules *pRules, tBoard *pBoard, tRandom *pRand, bool OnlyAdjacent)
 {
     while (NOT board_finished(pBoard))
     {
-        uint64_t Indices = rules_indices(pRules, pBoard);
+        uint64_t Indices = rules_indices(pRules, pBoard, OnlyAdjacent);
         tIndex Index = BitScanRandom64(Indices, pRand);
 
         board_advance(pBoard, Index, rules_player(pRules, pBoard));
@@ -123,10 +126,7 @@ char *rules_moves_string(tRules *pRules, int *pMoves, int Size)
         free(pId);
     }
 
-    Str = pBegin;
-
-Error:
-    return Str;
+    return pBegin;
 }
 
 static uint64_t rules_policy(tRules *pRules, tBoard *pBoard)
@@ -136,7 +136,7 @@ static uint64_t rules_policy(tRules *pRules, tBoard *pBoard)
     if (board_finished(pBoard))
     {
         Res = -EINVAL;
-        dbg_printf(DEBUG_LEVEL_ERROR, "Game is finshed\n");
+        dbg_printf(DEBUG_LEVEL_ERROR, "Cannot get move policy for finished game\n");
         goto Error;
     }
     else
@@ -164,7 +164,7 @@ Error:
     return Player;
 }
 
-static void rules_by_type(tRules *pRules, eRulesType RulesType)
+static void rules_load(tRules *pRules, eRulesType RulesType)
 {
     switch (RulesType)
     {

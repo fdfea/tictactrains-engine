@@ -3,19 +3,20 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "board.h"
-#include "debug.h"
 #include "mctn.h"
 #include "mctnlist.h"
 #include "util.h"
 
 static uint32_t mctn_size(tMctn *pNode);
-static float uct(tVisits ParentVisits, tVisits NodeVisits, float NodeScore);
+static float uct(tVisits ParentVisits, tVisits Visits, float Score);
 
 void mctn_init(tMctn *pNode, tBoard *pBoard)
 {
     board_copy(&pNode->State, pBoard);
+    memset(&pNode->Children, 0, sizeof(tMctnList));
 
     pNode->Visits = 0;
     pNode->Score = 0.0f;
@@ -49,9 +50,15 @@ bool mctn_equals(tMctn *pNode, tMctn *pN)
 
 tMctn *mctn_random_child(tMctn *pNode, tRandom *pRand)
 {
+    tMctn *pChild = NULL;
     tSize Size = mctnlist_size(&pNode->Children);
 
-    return IF (Size > 0) THEN mctnlist_get(&pNode->Children, rand_next(pRand) % Size) ELSE NULL;
+    if (Size > 0)
+    {
+        pChild = mctnlist_get(&pNode->Children, rand_next(pRand) % Size);
+    }
+
+    return pChild;
 }
 
 tMctn *mctn_most_visited_child(tMctn *pNode)
@@ -87,12 +94,11 @@ char *mctn_string(tMctn *pNode)
     char *pStr = emalloc(sizeof(char)*MCTN_STR_LEN), *pBegin = pStr, *pId = NULL;
     tVisits Visits = pNode->Visits;
 
-    pStr += sprintf(pStr, "Tree size: %d, Root score: %.2f/%d\n", 
+    pStr += sprintf(pStr, "Tree size: %d, Root score: %.2f/%d\n",
         mctn_size(pNode), pNode->Score, Visits);
 
     for (tIndex i = 0; i < mctnlist_size(&pNode->Children); ++i)
     {
-
         tMctn *pChild = mctnlist_get(&pNode->Children, i);
         pId = board_index_id(board_last_move_index(&pChild->State));
 
@@ -103,13 +109,9 @@ char *mctn_string(tMctn *pNode)
             UCT(Visits, pChild->Visits, pChild->Score));
 
         free(pId);
-        pId = NULL;
     }
 
-    pStr = pBegin;
-
-Error:
-    return pStr;
+    return pBegin;
 }
 
 static uint32_t mctn_size(tMctn *pNode)

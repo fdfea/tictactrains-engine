@@ -1,14 +1,9 @@
 #include <errno.h>
 #include <float.h>
 #include <stdbool.h>
-#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
-
-#ifdef TIMED
 #include <time.h>
-#endif
 
 #include "board.h"
 #include "debug.h"
@@ -38,25 +33,15 @@ static float mcts_weight_score(tScore Score);
 static double time_diff_ms(struct timespec *pBegin, struct timespec *pEnd);
 #endif
 
-int mcts_init(tMcts *pMcts, tRules *pRules, tBoard *pState, tMctsConfig *pConfig)
+void mcts_init(tMcts *pMcts, tRules *pRules, tBoard *pState, tMctsConfig *pConfig)
 {
-    int Res = 0;
-
     pMcts->pRoot = emalloc(sizeof(tMctn));
     pMcts->pRules = pRules;
     pMcts->Player = rules_player(pRules, pState);
     pMcts->Config = *pConfig;
 
-    Res = mctn_init(pMcts->pRoot, pState);
-    if (Res < 0)
-    {
-        goto Error;
-    }
-
+    mctn_init(pMcts->pRoot, pState);
     rand_init(&pMcts->Rand);
-
-Error:
-    return Res;
 }
 
 void mcts_config_init(tMctsConfig *pConfig)
@@ -73,7 +58,8 @@ void mcts_free(tMcts *pMcts)
 
 void mcts_simulate(tMcts *pMcts)
 {
-    tVisits Simulations = pMcts->Config.Simulations, Count = 0;
+    //set simulations to pRoot visits?
+    tVisits Count = 0, Simulations = pMcts->Config.Simulations;
 
 #ifdef TIMED
     struct timespec Begin, End;
@@ -82,7 +68,7 @@ void mcts_simulate(tMcts *pMcts)
 
     while (Count < Simulations AND pMcts->pRoot->Visits < TVISITS_MAX) 
     {
-        (void) mcts_simulation(pMcts, pMcts->pRoot);
+        mcts_simulation(pMcts, pMcts->pRoot);
         Count++;
     }
 
@@ -93,16 +79,15 @@ void mcts_simulate(tMcts *pMcts)
 #endif
 }
 
+//should this return a pointer?
 tBoard *mcts_get_state(tMcts *pMcts)
 {
     tBoard *pBoard = NULL;
 
     if (NOT board_finished(&pMcts->pRoot->State)
-        AND NOT mctn_list_empty(&pMcts->pRoot->Children))
+        AND NOT mctnlist_empty(&pMcts->pRoot->Children))
     {
-        mctnlist_shuffle(&pMcts->pRoot->Children, &pMcts->Rand);
-        tMctn *pBestChild = mctn_most_visited_child(pMcts->pRoot, &pMcts->Rand);
-        pBoard = &pBestChild->State;
+        pBoard = &mctn_most_visited_child(pMcts->pRoot, &pMcts->Rand)->State;
     }
     else
     {
@@ -118,17 +103,13 @@ void mcts_give_state(tMcts *pMcts, tBoard *pState)
     tMctn Tmp, *pTmp = &Tmp;
     mctn_init(pTmp, pState);
 
-    if (NOT board_finished(&pMcts->pRoot->State) 
-        AND NOT mctn_list_empty(&pMcts->pRoot->Children))
-    {
-        mctnlist_delete(&pMcts->pRoot->Children, pTmp);
-    }
-
-    mctn_free(pMcts->pRoot);
-    pMcts->pRoot = pTmp;
-
+    //should keep stats from previous node
     if (NOT board_finished(&pMcts->pRoot->State))
     {
+        mctnlist_delete(&pMcts->pRoot->Children, pTmp);
+        mctn_free(pMcts->pRoot);
+
+        pMcts->pRoot = pTmp;
         pMcts->Player = rules_player(pRules, &pMcts->pRoot->State);
     }
 }
@@ -139,7 +120,7 @@ float mcts_evaluate(tMcts *pMcts)
 
     if (pMcts->pRoot->Visits > 0)
     {
-        float Score = pMcts->pRoot->Score / (float) pMcts->pRoot->Visits;
+        float Score = pMcts->pRoot->Score / pMcts->pRoot->Visits;
         Eval = IF (pMcts->Player) THEN (1.0f - Score) ELSE Score;
         Eval = 2.0f * Eval - 1.0f;
     }
@@ -150,9 +131,11 @@ float mcts_evaluate(tMcts *pMcts)
 static void mcts_expand_node(tMcts *pMcts, tMctn *pNode)
 {
     tSize Size;
-    tBoard* pStates = rules_next_states(pMcts->pRules, &pNode->State, &Size);
+    tBoard* pStates = rules_next_states(pMcts->pRules, &pNode->State, &Size, true);
 
     mctn_expand(pNode, pStates, Size);
+    mctnlist_shuffle(&pNode->Children, &pMcts->Rand);
+    free(pStates);
 }
 
 static float mcts_simulation(tMcts *pMcts, tMctn *pNode)
@@ -167,8 +150,7 @@ static float mcts_simulation(tMcts *pMcts, tMctn *pNode)
         if (NOT board_finished(pState))
         {
             mcts_expand_node(pMcts, pNode);
-            tMctn *pChild = mctn_random_child(pNode, pRand);
-            Res = mcts_simulate_playout(pMcts, &pChild->State);
+            Res = mcts_simulate_playout(pMcts, &mctn_random_child(pNode, pRand)->State);
         }
         else 
         {
@@ -177,14 +159,13 @@ static float mcts_simulation(tMcts *pMcts, tMctn *pNode)
     }
     else
     {
-        tMctn *pBestChild = mctn_best_child_uct(pNode);
-        Res = mcts_simulation(pMcts, pBestChild);
+        Res = mcts_simulation(pMcts, mctn_best_child_uct(pNode));
     }
 
     if (NOT board_finished(pState))
     {
-        bool StatePlayer = rules_prev_player(pRules, pState);
-        float Score = IF (StatePlayer == pMcts->Player) THEN Res ELSE (1.0f - Res);
+        bool Player = rules_prev_player(pRules, pState);
+        float Score = IF (Player == pMcts->Player) THEN Res ELSE 1.0f - Res;
 
         mctn_update(pNode, Score);
     }
@@ -233,7 +214,7 @@ static float mcts_weight_score(tScore Score)
 #ifdef TIMED
 static double time_diff_ms(struct timespec *pBegin, struct timespec *pEnd)
 {
-    return (((double) pEnd->tv_sec * 1e3) + ((double) pEnd->tv_nsec / 1e6)) - 
-        (((double) pBegin->tv_sec * 1e3) + ((double) pBegin->tv_nsec / 1e6));
+    return ((pEnd->tv_sec * 1.0e3) + (pEnd->tv_nsec / 1.0e6)) - 
+        ((pBegin->tv_sec * 1.0e3) + (pBegin->tv_nsec / 1.0e6));
 }
 #endif

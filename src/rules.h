@@ -17,6 +17,12 @@ typedef enum RulesType
 } 
 eRulesType;
 
+typedef struct RulesConfig
+{
+    eRulesType RulesType;
+}
+tRulesConfig;
+
 typedef enum __attribute__((aligned(8))) MovePolicy
 {
     X_ALL       = 0x8001FFFFFFFFFFFFULL, 
@@ -48,19 +54,13 @@ typedef struct Rules
 }
 tRules;
 
-typedef struct RulesConfig
-{
-    eRulesType RulesType;
-}
-tRulesConfig;
-
 void rules_init(tRules *pRules, tRulesConfig *pConfig);
 void rules_config_init(tRulesConfig *pConfig);
-uint64_t rules_indices(tRules *pRules, tBoard *pBoard);
+uint64_t rules_indices(tRules *pRules, tBoard *pBoard, bool OnlyAdjacent);
 bool rules_player(tRules *pRules, tBoard *pBoard);
 bool rules_prev_player(tRules *pRules, tBoard *pState);
-void rules_simulate_playout(tRules *pRules, tBoard *pBoard, tRandom *pRand);
-tBoard *rules_next_states(tRules *pRules, tBoard *pBoard, tSize *pSize);
+void rules_simulate_playout(tRules *pRules, tBoard *pBoard, tRandom *pRand, bool OnlyAdjacent);
+tBoard *rules_next_states(tRules *pRules, tBoard *pBoard, tSize *pSize, bool OnlyAdjacent);
 char *rules_moves_string(tRules *pRules, int *pMoves, int Size);
 
 static const eMovePolicy RulesClassical[ROWS*COLUMNS] = 

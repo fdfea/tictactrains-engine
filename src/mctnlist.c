@@ -50,7 +50,7 @@ void mctnlist_delete(tMctnList *pList, tMctn *pNode)
     {
         if (mctn_equals(pNode, mctnlist_get(pList, i)))
         {
-            mctnlist_set(pList, &pList->pItems[--pList->Size], i);
+            mctnlist_set(pList, i, &pList->pItems[--pList->Size]);
             break;
         }
     }

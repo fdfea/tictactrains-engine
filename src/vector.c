@@ -32,14 +32,14 @@ int vector_init_items_capacity(tVector *pVector, void **ppItems, tSize Size, tSi
     
     if (Size > Capacity)
     {
-        dbg_printf(DEBUG_LEVEL_WARN, "Requested size for vector exceeds requested capacity\n");
         Res = -EINVAL;
+        dbg_printf(DEBUG_LEVEL_WARN, "Requested size for vector exceeds requested capacity\n");
         goto Error;
     }
     else if (Capacity > VECTOR_MAX_CAPACITY)
     {
-        dbg_printf(DEBUG_LEVEL_WARN, "Requested size for vector exceeds max capacity\n");
         Res = -EINVAL;
+        dbg_printf(DEBUG_LEVEL_WARN, "Requested size for vector exceeds max capacity\n");
         goto Error;
     }
 
@@ -138,7 +138,7 @@ void *vector_get(tVector *pVector, tIndex Index)
 
 void *vector_take(tVector *pVector, tIndex Index)
 {
-    void *pItem = vector_set(pVector, pVector->ppItems[--pVector->Size], Index);
+    void *pItem = vector_set(pVector, Index, pVector->ppItems[--pVector->Size]);
 
     vector_resize(pVector, vector_size(pVector));
 
@@ -180,8 +180,8 @@ void vector_shuffle(tVector *pVector, tRandom *pRand)
     for (i = vector_size(pVector) - 1; i > 0; --i) 
     {
         j = rand_next(pRand) % (i + 1);
-        pTmp = vector_set(pVector, vector_get(pVector, i), j);
-        (void) vector_set(pVector, pTmp, i);
+        pTmp = vector_set(pVector, j, vector_get(pVector, i));
+        (void) vector_set(pVector, i, pTmp);
     }
 }
 

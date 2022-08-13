@@ -24,7 +24,7 @@ void mctnlist_free(tMctnList *pList);
 tSize mctnlist_size(tMctnList *pList);
 bool mctnlist_empty(tMctnList *pList);
 tMctn *mctnlist_get(tMctnList *pList, tIndex Index);
-void mctnlist_set(tMctnList *pList, tMctn *pNode, tIndex Index);
+void mctnlist_set(tMctnList *pList, tIndex Index, tMctn *pNode);
 void mctnlist_delete(tMctnList *pList, tMctn *pNode);
 void mctnlist_shuffle(tMctnList *pList, tRandom *pRand);
 

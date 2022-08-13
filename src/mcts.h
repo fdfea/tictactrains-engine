@@ -2,7 +2,6 @@
 #define __MCTS_H__
 
 #include <stdbool.h>
-#include <stdint.h>
 
 #include "board.h"
 #include "mctn.h"
@@ -26,7 +25,7 @@ typedef struct Mcts
 } 
 tMcts;
 
-int mcts_init(tMcts *pMcts, tRules *pRules, tBoard *pState, tMctsConfig *pConfig);
+void mcts_init(tMcts *pMcts, tRules *pRules, tBoard *pState, tMctsConfig *pConfig);
 void mcts_config_init(tMctsConfig *pConfig);
 void mcts_free(tMcts *pMcts);
 void mcts_simulate(tMcts *pMcts);

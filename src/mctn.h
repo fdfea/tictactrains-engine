@@ -5,8 +5,8 @@
 #include <stdint.h>
 
 #include "board.h"
+#include "mctnlist.h"
 #include "random.h"
-#include "vector.h"
 
 #define MCTN_STR_LEN    2048
 
@@ -31,7 +31,7 @@ Mctn
 } 
 tMctn;
 
-int mctn_init(tMctn *pNode, tBoard *pBoard);
+void mctn_init(tMctn *pNode, tBoard *pBoard);
 void mctn_free(tMctn *pNode);
 void mctn_copy(tMctn *pNode, tMctn *pN);
 void mctn_update(tMctn *pNode, float Score);
