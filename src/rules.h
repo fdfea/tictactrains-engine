@@ -59,8 +59,8 @@ void rules_config_init(tRulesConfig *pConfig);
 uint64_t rules_indices(tRules *pRules, tBoard *pBoard, bool OnlyAdjacent);
 bool rules_player(tRules *pRules, tBoard *pBoard);
 bool rules_prev_player(tRules *pRules, tBoard *pState);
-void rules_simulate_playout(tRules *pRules, tBoard *pBoard, tRandom *pRand, bool OnlyAdjacent);
-tBoard *rules_next_states(tRules *pRules, tBoard *pBoard, tSize *pSize, bool OnlyAdjacent);
+void rules_simulate_playout(tRules *pRules, tBoard *pBoard, tRandom *pRand, bool OnlyNeighbors);
+tBoard *rules_next_states(tRules *pRules, tBoard *pBoard, tSize *pSize, bool OnlyNeighbors);
 char *rules_moves_string(tRules *pRules, int *pMoves, int Size);
 
 static const eMovePolicy RulesClassical[ROWS*COLUMNS] = 

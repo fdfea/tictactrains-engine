@@ -3,13 +3,15 @@
 #include <string.h>
 
 #include "debug.h"
+#include "random.h"
 #include "types.h"
 #include "util.h"
 #include "vector.h"
 
 #define VECTOR_SCALING_FACTOR   1
+#define VECTOR_HALF_CAPACITY    (VECTOR_MAX_CAPACITY >> 1)
 
-static void vector_resize(tVector *pVector, tSize Size);
+static void vector_resize(tVector *pVector, tSize Size, bool Grow);
 
 int vector_init(tVector *pVector)
 {
@@ -18,12 +20,12 @@ int vector_init(tVector *pVector)
 
 int vector_init_capacity(tVector *pVector, tSize Capacity)
 {
-    return vector_init_items(pVector, NULL, 0, Capacity);
+    return vector_init_items_capacity(pVector, NULL, 0, Capacity);
 }
 
 int vector_init_items(tVector *pVector, void **ppItems, tSize Size)
 {
-    vector_init_items_capacity(pVector, ppItems, Size, Size);
+    return vector_init_items_capacity(pVector, ppItems, Size, Size);
 }
 
 int vector_init_items_capacity(tVector *pVector, void **ppItems, tSize Size, tSize Capacity)
@@ -33,21 +35,24 @@ int vector_init_items_capacity(tVector *pVector, void **ppItems, tSize Size, tSi
     if (Size > Capacity)
     {
         Res = -EINVAL;
-        dbg_printf(DEBUG_LEVEL_WARN, "Requested size for vector exceeds requested capacity\n");
+        dbg_printf(DEBUG_LEVEL_WARN, "Cannot initialize vector with size greater than capacity");
         goto Error;
     }
     else if (Capacity > VECTOR_MAX_CAPACITY)
     {
         Res = -EINVAL;
-        dbg_printf(DEBUG_LEVEL_WARN, "Requested size for vector exceeds max capacity\n");
+        dbg_printf(DEBUG_LEVEL_WARN, "Cannot initialize vector capacity greater than max capacity");
         goto Error;
     }
 
-    pVector->ppItems = emalloc(Capacity * sizeof(void*));
+    pVector->ppItems = emalloc(Capacity * sizeof(void *));
+
+    memcpy(pVector->ppItems, ppItems, Size * sizeof(void *));
+
     pVector->Size = Size;
     pVector->Capacity = Capacity;
 
-    memcpy(pVector->ppItems, ppItems, Size);
+    dbg_printf(DEBUG_LEVEL_INFO, "Initialized vector, size: %d, capacity: %d", pVector->Size, pVector->Capacity);
 
 Error:
     return Res;
@@ -56,6 +61,7 @@ Error:
 void vector_free(tVector *pVector)
 {
     free(pVector->ppItems);
+    dbg_printf(DEBUG_LEVEL_INFO, "Freed vector");
 }
 
 tSize vector_size(tVector *pVector)
@@ -75,24 +81,27 @@ bool vector_empty(tVector *pVector)
 
 bool vector_full(tVector *pVector)
 {
-    return vector_size(pVector) == vector_capacity(pVector);
+    return vector_size(pVector) >= vector_capacity(pVector);
 }
 
 bool vector_add(tVector *pVector, void *pItem)
 {
     bool Added = false;
-    tSize Size = vector_size(pVector) + 1;
+    tSize Size = vector_size(pVector), Resize = Size + 1;
 
-    if (Size > VECTOR_MAX_CAPACITY)
+    if (Size >= VECTOR_MAX_CAPACITY)
     {
-        dbg_printf(DEBUG_LEVEL_WARN, "Vector reached max capacity\n");
+        dbg_printf(DEBUG_LEVEL_WARN, "Cannot add item to vector at max capacity");
         goto Error;
     }
 
-    vector_resize(pVector, Size);
+    vector_resize(pVector, Resize, true);
 
-    pVector->ppItems[pVector->Size++] = pItem;
+    pVector->ppItems[Size] = pItem;
+    pVector->Size = Resize;
     Added = true;
+
+    dbg_printf(DEBUG_LEVEL_INFO, "Added item to vector, size: %d, capacity: %d", pVector->Size, pVector->Capacity);
 
 Error:
     return Added;
@@ -101,20 +110,27 @@ Error:
 bool vector_merge(tVector *pVector, tVector *pV)
 {
     bool Merged = false;
-    tSize Size1 = vector_size(pVector), Size2 = vector_size(pV), Size = Size1 + Size2;
+    tSize Size1 = vector_size(pVector), Size2 = vector_size(pV), Resize = Size1 + Size2;
 
-    if (Size > VECTOR_MAX_CAPACITY)
+    if (Size1 >= VECTOR_MAX_CAPACITY OR Size2 >= VECTOR_MAX_CAPACITY)
     {
-        dbg_printf(DEBUG_LEVEL_WARN, "Vector reached max capacity\n");
+        dbg_printf(DEBUG_LEVEL_WARN, "Cannot merge vectors at max capacity");
+        goto Error;
+    }
+    else if (Resize < Size1)
+    {
+        dbg_printf(DEBUG_LEVEL_WARN, "Cannot merge vectors to exceed max capacity");
         goto Error;
     }
 
-    vector_resize(pVector, Size);
+    vector_resize(pVector, Resize, true);
 
-    memcpy(&pVector->ppItems[Size1], pV->ppItems, Size2 * sizeof(void*));
+    memcpy(&pVector->ppItems[Size1], pV->ppItems, Size2 * sizeof(void *));
 
-    pVector->Size = Size;
+    pVector->Size = Resize;
     Merged = true;
+
+    dbg_printf(DEBUG_LEVEL_INFO, "Merged items to vector, size: %d, capacity: %d", pVector->Size, pVector->Capacity);
 
 Error:
     return Merged;
@@ -124,51 +140,57 @@ void *vector_get(tVector *pVector, tIndex Index)
 {
     void *pItem = NULL;
 
-    if (Index >= 0 AND Index < vector_size(pVector))
+    if (Index >= vector_size(pVector))
     {
-        pItem = pVector->ppItems[Index];
-    }
-    else
-    {
-        dbg_printf(DEBUG_LEVEL_WARN, "Vector index out of bounds\n");
+        dbg_printf(DEBUG_LEVEL_WARN, "Cannot get item from vector at index out of bounds");
+        goto Error;
     }
 
+    pItem = pVector->ppItems[Index];
+
+Error:
     return pItem;
+}
+
+void *vector_set(tVector *pVector, tIndex Index, void *pItem)
+{
+    void *pTmp = NULL;
+
+    if (Index >= vector_size(pVector))
+    {
+        dbg_printf(DEBUG_LEVEL_WARN, "Cannot set item in vector to index out of bounds");
+        goto Error;
+    }
+
+    pTmp = pVector->ppItems[Index];
+    pVector->ppItems[Index] = pItem;
+
+    dbg_printf(DEBUG_LEVEL_INFO, "Set item at index: %d", Index);
+
+Error:
+    return pTmp;
 }
 
 void *vector_take(tVector *pVector, tIndex Index)
 {
-    void *pItem = vector_set(pVector, Index, pVector->ppItems[--pVector->Size]);
-
-    vector_resize(pVector, vector_size(pVector));
-
-    return pItem;
-}
-
-void *vector_get_random(tVector *pVector, tRandom *pRand)
-{
-    return vector_get(pVector, rand_next(pRand) % vector_size(pVector));
-}
-
-void *vector_take_random(tVector *pVector, tRandom *pRand)
-{
-    return vector_take(pVector, rand_next(pRand) % vector_size(pVector));
-}
-
-void *vector_set(tVector *pVector, void *pItem, tIndex Index)
-{
     void *pItem = NULL;
+    tSize Size = vector_size(pVector), Resize = Size - 1;
 
-    if (Index >= 0 AND Index < vector_size(pVector))
+    if (Index >= Size)
     {
-        pItem = pVector->ppItems[Index];
-        pVector->ppItems[Index] = pItem;
-    }
-    else
-    {
-        dbg_printf(DEBUG_LEVEL_WARN, "Vector index out of bounds\n");
+        dbg_printf(DEBUG_LEVEL_WARN, "Cannot take item from vector at index out of bounds");
+        goto Error;
     }
 
+    pItem = vector_set(pVector, Index, pVector->ppItems[Resize]);
+    
+    vector_resize(pVector, Resize, false);
+
+    pVector->Size = Resize;
+
+    dbg_printf(DEBUG_LEVEL_INFO, "Took item at index: %d, size: %d, capacity: %d", Index, pVector->Size, pVector->Capacity);
+
+Error:
     return pItem;
 }
 
@@ -179,7 +201,7 @@ void vector_shuffle(tVector *pVector, tRandom *pRand)
 
     for (i = vector_size(pVector) - 1; i > 0; --i) 
     {
-        j = rand_next(pRand) % (i + 1);
+        j = random_next(pRand) % (i + 1);
         pTmp = vector_set(pVector, j, vector_get(pVector, i));
         (void) vector_set(pVector, i, pTmp);
     }
@@ -201,24 +223,25 @@ void vector_foreach(tVector *pVector, tEffectFunction *pFunction)
     }
 }
 
-static void vector_resize(tVector *pVector, tSize Size)
+static void vector_resize(tVector *pVector, tSize Size, bool Grow)
 {
     tSize Resize, Capacity;
     
     Resize = Capacity = vector_capacity(pVector);
 
-    if (Size > Capacity) 
+    if (Grow AND Size > Capacity)
     {
-        Resize = min(Size << VECTOR_SCALING_FACTOR, VECTOR_MAX_CAPACITY);
+        Resize = (Size >= VECTOR_HALF_CAPACITY) ? VECTOR_MAX_CAPACITY : Size << VECTOR_SCALING_FACTOR;
     }
-    else if (Size <= Capacity >> VECTOR_SCALING_FACTOR)
+    else if (NOT Grow AND Size <= Capacity >> VECTOR_SCALING_FACTOR)
     {
         Resize = Size;
     }
 
     if (Resize != Capacity)
     {
-        pVector->ppItems = erealloc(pVector->ppItems, sizeof(void*) * Resize);
+        dbg_printf(DEBUG_LEVEL_INFO, "Resizing vector from %d to %d", pVector->Capacity, Resize);
+        pVector->ppItems = erealloc(pVector->ppItems, Resize * sizeof(void *));
         pVector->Capacity = Resize;
     }
 }

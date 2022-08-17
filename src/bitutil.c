@@ -69,6 +69,5 @@ tIndex BitKthSetIndex64(uint64_t Bits, uint64_t K)
 
 tIndex BitScanRandom64(uint64_t Bits, tRandom *pRand)
 {
-    uint64_t K = rand_next(pRand) % BitPopCount64(Bits) + 1;
-    return BitKthSetIndex64(Bits, K);
+    return BitKthSetIndex64(Bits, rand_next(pRand) % BitPopCount64(Bits) + 1);
 }

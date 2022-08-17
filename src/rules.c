@@ -28,9 +28,9 @@ void rules_config_init(tRulesConfig *pConfig)
     pConfig->RulesType = RULES_CLASSICAL;
 }
 
-uint64_t rules_indices(tRules *pRules, tBoard *pBoard, bool OnlyAdjacent)
+uint64_t rules_indices(tRules *pRules, tBoard *pBoard, bool OnlyNeighbors)
 {
-    return rules_policy(pRules, pBoard) & board_empty_indices(pBoard, OnlyAdjacent);
+    return rules_policy(pRules, pBoard) & board_empty_indices(pBoard, OnlyNeighbors);
 }
 
 bool rules_player(tRules *pRules, tBoard *pBoard)
@@ -51,9 +51,9 @@ bool rules_prev_player(tRules *pRules, tBoard *pBoard)
     return Player;
 }
 
-tBoard *rules_next_states(tRules *pRules, tBoard *pBoard, tSize *pSize, bool OnlyAdjacent)
+tBoard *rules_next_states(tRules *pRules, tBoard *pBoard, tSize *pSize, bool OnlyNeighbors)
 {
-    uint64_t Indices = rules_indices(pRules, pBoard, OnlyAdjacent);
+    uint64_t Indices = rules_indices(pRules, pBoard, OnlyNeighbors);
     bool Player = rules_player(pRules, pBoard);
     tSize Size = BitPopCount64(Indices);
     tBoard *pStates = emalloc(Size * sizeof(tBoard));
@@ -74,11 +74,11 @@ tBoard *rules_next_states(tRules *pRules, tBoard *pBoard, tSize *pSize, bool Onl
     return pStates;
 }
 
-void rules_simulate_playout(tRules *pRules, tBoard *pBoard, tRandom *pRand, bool OnlyAdjacent)
+void rules_simulate_playout(tRules *pRules, tBoard *pBoard, tRandom *pRand, bool OnlyNeighbors)
 {
     while (NOT board_finished(pBoard))
     {
-        uint64_t Indices = rules_indices(pRules, pBoard, OnlyAdjacent);
+        uint64_t Indices = rules_indices(pRules, pBoard, OnlyNeighbors);
         tIndex Index = BitScanRandom64(Indices, pRand);
 
         board_advance(pBoard, Index, rules_player(pRules, pBoard));
@@ -136,7 +136,7 @@ static uint64_t rules_policy(tRules *pRules, tBoard *pBoard)
     if (board_finished(pBoard))
     {
         Res = -EINVAL;
-        dbg_printf(DEBUG_LEVEL_ERROR, "Cannot get move policy for finished game\n");
+        dbg_printf(DEBUG_LEVEL_WARN, "Cannot get move policy for finished game");
         goto Error;
     }
     else
@@ -154,7 +154,7 @@ static bool rules_index_player(tRules *pRules, tIndex Index)
 
     if (NOT board_index_valid(Index))
     {
-        dbg_printf(DEBUG_LEVEL_WARN, "Invalid index\n");
+        dbg_printf(DEBUG_LEVEL_WARN, "Invalid index");
         goto Error;
     }
 
@@ -185,7 +185,7 @@ static void rules_load(tRules *pRules, eRulesType RulesType)
         }
         default: 
         {
-            dbg_printf(DEBUG_LEVEL_ERROR, "Invalid rules type\n");
+            dbg_printf(DEBUG_LEVEL_ERROR, "Invalid rules type");
             break;
         }
     }

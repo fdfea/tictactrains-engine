@@ -8,9 +8,9 @@
 void *emalloc(size_t Size)
 {
     void *pMemory = malloc(Size);
-    if (pMemory IS NULL AND Size == 0)
+    if (pMemory IS NULL AND Size != 0)
     {
-        dbg_printf(DEBUG_LEVEL_ERROR, "No memory available\n");
+        dbg_printf(DEBUG_LEVEL_ERROR, "No memory available");
         exit(-ENOMEM);
     }
 
@@ -20,9 +20,9 @@ void *emalloc(size_t Size)
 void *erealloc(void *pMemory, size_t Size)
 {
     pMemory = realloc(pMemory, Size);
-    if (pMemory IS NULL AND Size == 0)
+    if (pMemory IS NULL AND Size != 0)
     {
-        dbg_printf(DEBUG_LEVEL_ERROR, "No memory available\n");
+        dbg_printf(DEBUG_LEVEL_ERROR, "No memory available");
         exit(-ENOMEM);
     }
 

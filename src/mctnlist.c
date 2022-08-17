@@ -61,7 +61,7 @@ void mctnlist_shuffle(tMctnList *pList, tRandom *pRand)
     tMctn Tmp;
     tIndex i, j;
 
-    for (i = mctnlist_size(pList) - 1; i > 0; --i) 
+    for (i = mctnlist_size(pList) - 1; i > 0; --i)
     {
         j = rand_next(pRand) % (i + 1);
         Tmp = *mctnlist_get(pList, i);

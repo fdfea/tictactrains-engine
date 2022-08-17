@@ -12,6 +12,7 @@ typedef struct MctsConfig
 {
     tVisits Simulations;
     eScoringAlgorithm ScoringAlgorithm;
+    bool SearchOnlyNeighbors;
 }
 tMctsConfig;
 

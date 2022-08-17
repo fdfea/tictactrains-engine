@@ -105,7 +105,7 @@ int board_advance(tBoard *pBoard, tIndex Index, bool Player)
     if (NOT board_index_empty(pBoard, Index))
     {
         Res = -EINVAL;
-        dbg_printf(DEBUG_LEVEL_ERROR, "Invalid move\n");
+        dbg_printf(DEBUG_LEVEL_ERROR, "Invalid move");
         goto Error;
     }
 
@@ -165,7 +165,7 @@ tScore board_score(tBoard *pBoard, eScoringAlgorithm Algorithm)
         {
             if (NOT board_finished(pBoard))
             {
-                dbg_printf(DEBUG_LEVEL_WARN, "Cannot quick score if game not finished\n");
+                dbg_printf(DEBUG_LEVEL_WARN, "Cannot quick score if game not finished");
             }
             else
             {
@@ -175,7 +175,7 @@ tScore board_score(tBoard *pBoard, eScoringAlgorithm Algorithm)
         }
         default:
         {
-            dbg_printf(DEBUG_LEVEL_WARN, "Invalid scoring algorithm\n");
+            dbg_printf(DEBUG_LEVEL_WARN, "Invalid scoring algorithm");
             break;
         }
     }
@@ -281,7 +281,7 @@ char *board_index_id(tIndex Index)
 
     if (NOT board_index_valid(Index))
     {
-        dbg_printf(DEBUG_LEVEL_WARN, "Invalid index\n");
+        dbg_printf(DEBUG_LEVEL_WARN, "Invalid index");
         goto Error;
     }
 
@@ -374,7 +374,7 @@ static bool board_index_empty(tBoard *pBoard, tIndex Index)
 {
     if (NOT board_index_valid(Index))
     {
-        dbg_printf(DEBUG_LEVEL_WARN, "Invalid index\n");
+        dbg_printf(DEBUG_LEVEL_WARN, "Invalid index");
     }
 
     return BitTest64(pBoard->Empty, Index);
@@ -384,7 +384,7 @@ static bool board_index_player(tBoard *pBoard, tIndex Index)
 {
     if (board_index_empty(pBoard, Index))
     {
-        dbg_printf(DEBUG_LEVEL_WARN, "Index empty\n");
+        dbg_printf(DEBUG_LEVEL_WARN, "Index empty");
     }
 
     return BitTest64(pBoard->Data, Index);

@@ -16,6 +16,7 @@ void debug_printf(eDebugLevel Level, const char *Format, ...)
 
     fprintf(stderr, "%s", debug_label(Level));
     vfprintf(stderr, Format, Args);
+    fprintf(stderr, "\n");
 
     va_end(Args);
 }

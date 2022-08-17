@@ -12,13 +12,14 @@
 #include "util.h"
 #include "vector.h"
 
-#define CONFIG_FILENAME             "ttt.conf"
-#define CONFIG_COMPUTER_PLAYING     "COMPUTER_PLAYING"
-#define CONFIG_COMPUTER_PLAYER      "COMPUTER_PLAYER"
-#define CONFIG_RULES_TYPE           "RULES_TYPE"
-#define CONFIG_SIMULATIONS          "SIMULATIONS"
-#define CONFIG_SCORING_ALGORITHM    "SCORING_ALGORITHM"
-#define CONFIG_STARTING_MOVES       "STARTING_MOVES"
+#define CONFIG_FILENAME                 "ttt.conf"
+#define CONFIG_COMPUTER_PLAYING         "COMPUTER_PLAYING"
+#define CONFIG_COMPUTER_PLAYER          "COMPUTER_PLAYER"
+#define CONFIG_RULES_TYPE               "RULES_TYPE"
+#define CONFIG_SIMULATIONS              "SIMULATIONS"
+#define CONFIG_SCORING_ALGORITHM        "SCORING_ALGORITHM"
+#define CONFIG_SEARCH_ONLY_NEIGHBORS    "SEARCH_ONLY_NEIGHBORS"
+#define CONFIG_STARTING_MOVES           "STARTING_MOVES"
 
 #define CONFIG_MAXLINE              128
 #define CONFIG_MAX_MOVES_STR_LEN    (ROWS*COLUMNS*2)
@@ -61,10 +62,10 @@ int config_load(tConfig *pConfig)
     
     struct
     {
-        bool ComputerPlaying, ComputerPlayer, RulesType,
-             Simulations, ScoringAlgorithm, StartPosition;
+        bool ComputerPlaying, ComputerPlayer, RulesType, Simulations,
+            ScoringAlgorithm, SearchOnlyNeighbors, StartPosition;
     }
-    Found = {false, false, false, false, false, false};
+    Found = { false, false, false, false, false, false, false };
 
     if ((pFile = fopen(CONFIG_FILENAME, "r")) ISNOT NULL)
     {
@@ -213,6 +214,24 @@ int config_load(tConfig *pConfig)
 
                 Found.ScoringAlgorithm = true;
             }
+            else if (NOT Found.SearchOnlyNeighbors AND CONFIG_STRNCMP(pKey, CONFIG_SEARCH_ONLY_NEIGHBORS))
+            {
+                if (Val == 0)
+                {
+                    pConfig->MctsConfig.SearchOnlyNeighbors = false;
+                }
+                else if (Val == 1)
+                {
+                    pConfig->MctsConfig.SearchOnlyNeighbors = true;
+                }
+                else
+                {
+                    Res = -EINVAL;
+                    goto Error;
+                }
+
+                Found.SearchOnlyNeighbors = true;
+            }
             else
             {
                 Res = -EINVAL;
@@ -227,11 +246,12 @@ int config_load(tConfig *pConfig)
         goto NoFile;
     }
 
-    dbg_printf(DEBUG_LEVEL_INFO, "%s: %d\n", CONFIG_COMPUTER_PLAYING, pConfig->ComputerPlaying);
-    dbg_printf(DEBUG_LEVEL_INFO, "%s: %d\n", CONFIG_COMPUTER_PLAYER, pConfig->ComputerPlayer);
-    dbg_printf(DEBUG_LEVEL_INFO, "%s: %d\n", CONFIG_RULES_TYPE, pConfig->RulesConfig.RulesType);
-    dbg_printf(DEBUG_LEVEL_INFO, "%s: %d\n", CONFIG_SIMULATIONS, pConfig->MctsConfig.Simulations);
-    dbg_printf(DEBUG_LEVEL_INFO, "%s: %d\n", CONFIG_SCORING_ALGORITHM, pConfig->MctsConfig.ScoringAlgorithm);
+    dbg_printf(DEBUG_LEVEL_INFO, "%s: %d", CONFIG_COMPUTER_PLAYING, pConfig->ComputerPlaying);
+    dbg_printf(DEBUG_LEVEL_INFO, "%s: %d", CONFIG_COMPUTER_PLAYER, pConfig->ComputerPlayer);
+    dbg_printf(DEBUG_LEVEL_INFO, "%s: %d", CONFIG_RULES_TYPE, pConfig->RulesConfig.RulesType);
+    dbg_printf(DEBUG_LEVEL_INFO, "%s: %d", CONFIG_SIMULATIONS, pConfig->MctsConfig.Simulations);
+    dbg_printf(DEBUG_LEVEL_INFO, "%s: %d", CONFIG_SCORING_ALGORITHM, pConfig->MctsConfig.ScoringAlgorithm);
+    dbg_printf(DEBUG_LEVEL_INFO, "%s: %d", CONFIG_SEARCH_ONLY_NEIGHBORS, pConfig->MctsConfig.SearchOnlyNeighbors);
 
     goto Success;
 

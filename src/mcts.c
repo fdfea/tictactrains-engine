@@ -48,6 +48,7 @@ void mcts_config_init(tMctsConfig *pConfig)
 {
     pConfig->Simulations = 1000;
     pConfig->ScoringAlgorithm = SCORING_ALGORITHM_OPTIMAL;
+    pConfig->SearchOnlyNeighbors = true;
 }
 
 void mcts_free(tMcts *pMcts)
@@ -91,7 +92,7 @@ tBoard *mcts_get_state(tMcts *pMcts)
     }
     else
     {
-        dbg_printf(DEBUG_LEVEL_ERROR, "No state available\n");
+        dbg_printf(DEBUG_LEVEL_ERROR, "No state available");
     }
 
     return pBoard;
@@ -131,7 +132,7 @@ float mcts_evaluate(tMcts *pMcts)
 static void mcts_expand_node(tMcts *pMcts, tMctn *pNode)
 {
     tSize Size;
-    tBoard* pStates = rules_next_states(pMcts->pRules, &pNode->State, &Size, true);
+    tBoard* pStates = rules_next_states(pMcts->pRules, &pNode->State, &Size, pMcts->Config.SearchOnlyNeighbors);
 
     mctn_expand(pNode, pStates, Size);
     mctnlist_shuffle(&pNode->Children, &pMcts->Rand);
@@ -179,7 +180,7 @@ static float mcts_simulate_playout(tMcts *pMcts, tBoard *pState)
     tBoard Board;
 
     board_copy(&Board, pState);
-    rules_simulate_playout(pMcts->pRules, &Board, &pMcts->Rand);
+    rules_simulate_playout(pMcts->pRules, &Board, &pMcts->Rand, true);
     
     Score = mcts_weight_score(board_score(&Board, pMcts->Config.ScoringAlgorithm));
     Res = IF (pMcts->Player) THEN Score ELSE (1.0f - Score);

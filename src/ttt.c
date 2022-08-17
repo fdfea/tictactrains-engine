@@ -230,7 +230,7 @@ int ttt_give_move(tTTT *pGame, int Index)
         OR NOT BitTest64(Indices, Index))
     {
         Res = -EINVAL;
-        dbg_printf(DEBUG_LEVEL_ERROR, "Invalid move attempted\n");
+        dbg_printf(DEBUG_LEVEL_ERROR, "Invalid move attempted");
         goto Error;
     }
 
@@ -286,7 +286,7 @@ static int ttt_load_moves(tTTT *pGame, tVector *pMoves)
         if (Res < 0)
         {
             board_copy(&pGame->Board, &BoardCopy);
-            dbg_printf(DEBUG_LEVEL_ERROR, "Failed to load moves\n");
+            dbg_printf(DEBUG_LEVEL_ERROR, "Failed to load moves");
             goto Error;
         }
     }
