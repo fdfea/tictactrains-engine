@@ -8,13 +8,7 @@
 
 #define VECTOR_MAX_CAPACITY     TSIZE_MAX
 
-typedef void *(tMapFunction)(void *);
-typedef void (tEffectFunction)(void *);
-
 typedef struct Vector
-#ifdef PACKED
-__attribute__((packed))
-#endif
 {
     void **ppItems;
     tSize Size;
@@ -37,7 +31,5 @@ void *vector_get(tVector *pVector, tIndex Index);
 void *vector_set(tVector *pVector, tIndex Index, void *pItem);
 void *vector_take(tVector *pVector, tIndex Index);
 void vector_shuffle(tVector *pVector, tRandom *pRand);
-void vector_map(tVector *pVector, tMapFunction *pFunction);
-void vector_foreach(tVector *pVector, tEffectFunction *pFunction);
 
 #endif

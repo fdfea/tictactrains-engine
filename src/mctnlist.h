@@ -19,13 +19,14 @@ __attribute__((packed))
 }
 tMctnList;
 
-void mctnlist_init(tMctnList *pList, tBoard *pStates, tSize Size);
+void mctnlist_init(tMctnList *pList);
 void mctnlist_free(tMctnList *pList);
 tSize mctnlist_size(tMctnList *pList);
 bool mctnlist_empty(tMctnList *pList);
+void mctnlist_expand(tMctnList *pList, tBoard *pStates, tSize Size);
 tMctn *mctnlist_get(tMctnList *pList, tIndex Index);
-void mctnlist_set(tMctnList *pList, tIndex Index, tMctn *pNode);
-void mctnlist_delete(tMctnList *pList, tMctn *pNode);
-void mctnlist_shuffle(tMctnList *pList, tRandom *pRand);
+tMctn mctnlist_delete(tMctnList *pList, tMctn Node);
+tMctn mctnlist_set(tMctnList *pList, tIndex Index, tMctn Node);
+void mctnlist_shuffle(tMctnList *pList, tRandom *pRandom);
 
 #endif

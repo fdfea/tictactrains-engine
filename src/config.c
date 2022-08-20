@@ -6,8 +6,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "board.h"
 #include "config.h"
 #include "debug.h"
+#include "rules.h"
 #include "types.h"
 #include "util.h"
 #include "vector.h"

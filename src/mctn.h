@@ -37,7 +37,7 @@ void mctn_copy(tMctn *pNode, tMctn *pN);
 void mctn_update(tMctn *pNode, float Score);
 void mctn_expand(tMctn *pNode, tBoard *pStates, tSize Size);
 bool mctn_equals(tMctn *pNode, tMctn *pN);
-tMctn *mctn_random_child(tMctn *pNode, tRandom *pRand);
+tMctn *mctn_random_child(tMctn *pNode, tRandom *pRandom);
 tMctn *mctn_most_visited_child(tMctn *pNode);
 tMctn *mctn_best_child_uct(tMctn *pNode);
 char *mctn_string(tMctn *pNode);

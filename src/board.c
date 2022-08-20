@@ -2,7 +2,6 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <string.h>
 
 #include "bitutil.h"
 #include "board.h"
@@ -105,7 +104,7 @@ int board_advance(tBoard *pBoard, tIndex Index, bool Player)
     if (NOT board_index_empty(pBoard, Index))
     {
         Res = -EINVAL;
-        dbg_printf(DEBUG_LEVEL_ERROR, "Invalid move");
+        dbg_printf(DEBUG_LEVEL_ERROR, "Cannot make move at invalid index");
         goto Error;
     }
 
@@ -116,8 +115,8 @@ int board_advance(tBoard *pBoard, tIndex Index, bool Player)
 
     BitReset64(&pBoard->Empty, Index);
 
-    pBoard->Neighbors |= pBoard->Empty & VALID_NEIGHBORS(Index);
-    pBoard->Data = pBoard->Data & BOARD_MASK | (uint64_t) Index << BOARD_LAST_MOVE_INDEX;
+    pBoard->Neighbors = (pBoard->Neighbors | NEIGHBOR_INDICES(Index)) & pBoard->Empty;
+    pBoard->Data = (pBoard->Data & BOARD_MASK) | (uint64_t) Index << BOARD_LAST_MOVE_INDEX;
 
 Error:
     return Res;
@@ -138,11 +137,21 @@ bool board_index_valid(tIndex Index)
     return Index >= 0 AND Index < ROWS*COLUMNS;
 }
 
-uint64_t board_empty_indices(tBoard *pBoard, bool OnlyNeighbors)
+uint64_t board_empty_indices(tBoard *pBoard, uint64_t Constraint, bool OnlyNeighbors)
 {
-    return IF (OnlyNeighbors && BitPopCount64(pBoard->Neighbors) >= BOARD_MIN_NEIGHBOR_INDICES)
-        THEN pBoard->Neighbors
-        ELSE pBoard->Empty;
+    uint64_t Empty = pBoard->Empty & Constraint;
+
+    if (OnlyNeighbors)
+    {
+        uint64_t Neighbors = pBoard->Neighbors & Constraint;
+
+        if (BitPopCount64(Neighbors) >= BOARD_MIN_NEIGHBOR_INDICES)
+        {
+            Empty = Neighbors;
+        }
+    }
+
+    return Empty;
 }
 
 tIndex board_last_move_index(tBoard *pBoard)
@@ -165,7 +174,7 @@ tScore board_score(tBoard *pBoard, eScoringAlgorithm Algorithm)
         {
             if (NOT board_finished(pBoard))
             {
-                dbg_printf(DEBUG_LEVEL_WARN, "Cannot quick score if game not finished");
+                dbg_printf(DEBUG_LEVEL_WARN, "Cannot quick score board if game not finished");
             }
             else
             {
@@ -175,7 +184,7 @@ tScore board_score(tBoard *pBoard, eScoringAlgorithm Algorithm)
         }
         default:
         {
-            dbg_printf(DEBUG_LEVEL_WARN, "Invalid scoring algorithm");
+            dbg_printf(DEBUG_LEVEL_WARN, "Cannot score board with invalid scoring algorithm");
             break;
         }
     }
@@ -186,13 +195,12 @@ tScore board_score(tBoard *pBoard, eScoringAlgorithm Algorithm)
 static tScore board_optimal_score(tBoard *pBoard)
 {
     tScore ScoreX = 0, ScoreO = 0;
-    uint64_t NotEmpty = ~pBoard->Empty;
+    uint64_t NotEmpty = ~pBoard->Empty & BOARD_MASK;
 
     while (NOT BitEmpty64(NotEmpty))
     {
         tIndex Index = BitTzCount64(NotEmpty);
-        uint64_t Checked = 0ULL;
-        tSize Score = board_index_longest_path(pBoard, Index, Checked);
+        tSize Score = board_index_longest_path(pBoard, Index, 0ULL);
 
         if (board_index_player(pBoard, Index)) 
         {
@@ -218,7 +226,7 @@ static tScore board_quick_score(tBoard *pBoard)
     {
         bool Player = board_index_player(pBoard, i);
 
-        if (board_index_adjacent(IF Player THEN pBoard->Data ELSE ~pBoard->Data, i) <= 1)
+        if (board_index_adjacent_count(IF Player THEN pBoard->Data ELSE ~pBoard->Data, i) <= 1)
         {
             tSize Score = board_index_checked_path(pBoard, i, 0ULL, &Checked);
 
@@ -233,9 +241,7 @@ static tScore board_quick_score(tBoard *pBoard)
         }
     }
 
-    NotChecked = ~Checked;
-
-    while (NOT BitEmpty64(NotChecked))
+    while (NOT BitEmpty64(NotChecked = ~Checked & BOARD_MASK))
     {
         tIndex Index = BitTzCount64(NotChecked);
         tSize Score = board_index_checked_path(pBoard, Index, 0ULL, &Checked);
@@ -248,8 +254,6 @@ static tScore board_quick_score(tBoard *pBoard)
         {
             SET_IF_GREATER(Score, ScoreO);
         }
-
-        BitReset64(&NotChecked, Index);
     }
 
     return ScoreX - ScoreO;
@@ -277,17 +281,17 @@ bool board_id_valid(char (*pId)[BOARD_ID_STR_LEN])
 
 char *board_index_id(tIndex Index)
 {
-    char Str = NULL;
+    char *Str = NULL;
 
     if (NOT board_index_valid(Index))
     {
-        dbg_printf(DEBUG_LEVEL_WARN, "Invalid index");
+        dbg_printf(DEBUG_LEVEL_WARN, "Cannot convert index to id with invalid index");
         goto Error;
     }
 
-    Str = emalloc(sizeof(char) * BOARD_ID_STR_LEN);
+    Str = emalloc(BOARD_ID_STR_LEN * sizeof(char));
 
-    sprintf(Str, "%c%c\0", (Index%ROWS)+'a', (ROWS-(Index/ROWS))+'0');
+    sprintf(Str, "%c%c", (Index%ROWS)+'a', (ROWS-(Index/ROWS))+'0');
 
 Error:
     return Str;
@@ -295,7 +299,7 @@ Error:
 
 char *board_string(tBoard *pBoard)
 {
-    char *Str = emalloc(sizeof(char) * BOARD_STR_LEN), *pBegin = Str;
+    char *Str = emalloc(BOARD_STR_LEN * sizeof(char)), *pBegin = Str;
 
     for (tIndex i = 0; i < ROWS*COLUMNS; ++i)
     {
@@ -320,9 +324,8 @@ char *board_string(tBoard *pBoard)
 
 static tSize board_index_longest_path(tBoard *pBoard, tIndex Index, uint64_t Checked)
 {
-    tSize MaxPathLen = 1;
+    tSize MaxPathLen = 0;
     uint64_t AdjacentIndices = ADJACENT_INDICES(Index);
-    bool Player = board_index_player(pBoard, Index);
 
     BitSet64(&Checked, Index);
 
@@ -330,51 +333,51 @@ static tSize board_index_longest_path(tBoard *pBoard, tIndex Index, uint64_t Che
     {
         tIndex AdjIndex = BitTzCount64(AdjacentIndices);
     
-        if (board_index_traversable(pBoard, AdjIndex, Player, Checked))
+        if (board_index_traversable(pBoard, AdjIndex, board_index_player(pBoard, Index), Checked))
         {
             tSize PathLen = board_index_longest_path(pBoard, AdjIndex, Checked);
-            SET_IF_GREATER(PathLen, MaxPathLen);           
+            SET_IF_GREATER(PathLen, MaxPathLen);        
         }
 
         BitReset64(&AdjacentIndices, AdjIndex);
     }
 
-    return MaxPathLen;
+    return MaxPathLen + 1;
 }
 
 static tSize board_index_checked_path(tBoard *pBoard, tIndex Index, uint64_t Checked, uint64_t *pPath)
 {
-    tSize MaxPathLen = 1;
+    tSize MaxPathLen = 0;
     uint64_t MaxPath = 0ULL, ThisPath = 0ULL, AdjacentIndices = ADJACENT_INDICES(Index);
-    bool Player = board_index_player(pBoard, Index);
 
     BitSet64(&ThisPath, Index);
+
     Checked |= MaxPath = ThisPath;
 
     while (NOT BitEmpty64(AdjacentIndices))
     {
         tIndex AdjIndex = BitTzCount64(AdjacentIndices);
     
-        if (board_index_traversable(pBoard, AdjIndex, Player, Checked))
+        if (board_index_traversable(pBoard, AdjIndex, board_index_player(pBoard, Index), Checked))
         {
             uint64_t Path = ThisPath;
             tSize PathLen = board_index_checked_path(pBoard, AdjIndex, Checked, &Path);
-            SET_IF_GREATER_W_EXTRA(PathLen, MaxPathLen, Path, MaxPath);            
+            SET_IF_GREATER_W_EXTRA(PathLen, MaxPathLen, Path, MaxPath);         
         }
 
         BitReset64(&AdjacentIndices, AdjIndex);
     }
     
-    //forgot what this does
     *pPath |= MaxPath;
-    return MaxPathLen;
+
+    return MaxPathLen + 1;
 }
 
 static bool board_index_empty(tBoard *pBoard, tIndex Index)
 {
     if (NOT board_index_valid(Index))
     {
-        dbg_printf(DEBUG_LEVEL_WARN, "Invalid index");
+        dbg_printf(DEBUG_LEVEL_WARN, "Cannot check if board index out of bounds is empty");
     }
 
     return BitTest64(pBoard->Empty, Index);
@@ -384,7 +387,7 @@ static bool board_index_player(tBoard *pBoard, tIndex Index)
 {
     if (board_index_empty(pBoard, Index))
     {
-        dbg_printf(DEBUG_LEVEL_WARN, "Index empty");
+        dbg_printf(DEBUG_LEVEL_WARN, "Cannot get player from empty board index");
     }
 
     return BitTest64(pBoard->Data, Index);
@@ -397,7 +400,7 @@ static bool board_index_traversable(tBoard *pBoard, tIndex Index, bool Player, u
         AND NOT BitTest64(Checked, Index);
 }
 
-static tSize board_index_adjacent_count(uint64_t Data, tIndex Index, bool Player)
+static tSize board_index_adjacent_count(uint64_t Data, tIndex Index)
 {
     uint64_t AdjacentIndices = ADJACENT_INDICES(Index);
     tSize AdjacentCount = 0;
@@ -406,7 +409,7 @@ static tSize board_index_adjacent_count(uint64_t Data, tIndex Index, bool Player
     {
         tIndex Index = BitTzCount64(AdjacentIndices);
     
-        if (NOT BitTest64(Data, Index))
+        if (BitTest64(Data, Index))
         {
             AdjacentCount++;
         }

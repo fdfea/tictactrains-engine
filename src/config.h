@@ -1,6 +1,8 @@
 #ifndef __CONFIG_H__
 #define __CONFIG_H__
 
+#include <stdbool.h>
+
 #include "mcts.h"
 #include "rules.h"
 #include "vector.h"

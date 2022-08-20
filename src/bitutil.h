@@ -15,6 +15,6 @@ tSize BitPopCount64(uint64_t Bits);
 tSize BitLzCount64(uint64_t Bits);
 tSize BitTzCount64(uint64_t Bits);
 tIndex BitKthSetIndex64(uint64_t Bits, uint64_t K);
-tIndex BitScanRandom64(uint64_t Bits, tRandom *pRand);
+tIndex BitScanRandom64(uint64_t Bits, tRandom *pRandom);
 
 #endif

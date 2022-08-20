@@ -6,6 +6,7 @@
 #include <string.h>
 
 #include "bitutil.h"
+#include "board.h"
 #include "debug.h"
 #include "random.h"
 #include "rules.h"
@@ -30,7 +31,7 @@ void rules_config_init(tRulesConfig *pConfig)
 
 uint64_t rules_indices(tRules *pRules, tBoard *pBoard, bool OnlyNeighbors)
 {
-    return rules_policy(pRules, pBoard) & board_empty_indices(pBoard, OnlyNeighbors);
+    return board_empty_indices(pBoard, rules_policy(pRules, pBoard), OnlyNeighbors);
 }
 
 bool rules_player(tRules *pRules, tBoard *pBoard)
@@ -54,17 +55,15 @@ bool rules_prev_player(tRules *pRules, tBoard *pBoard)
 tBoard *rules_next_states(tRules *pRules, tBoard *pBoard, tSize *pSize, bool OnlyNeighbors)
 {
     uint64_t Indices = rules_indices(pRules, pBoard, OnlyNeighbors);
-    bool Player = rules_player(pRules, pBoard);
     tSize Size = BitPopCount64(Indices);
-    tBoard *pStates = emalloc(Size * sizeof(tBoard));
+    tBoard *pStates = emalloc(Size * sizeof(tBoard)), *pState = pStates;
 
-    while (NOT BitEmpty64(Indices)) 
+    while (NOT BitEmpty64(Indices))
     {
-        tIndex Index = BitLzCount64(Indices);
-        tBoard *pState = &pStates[Index];
+        tIndex Index = BitTzCount64(Indices);
 
         board_copy(pState, pBoard);
-        board_advance(pState, Index, Player);
+        board_advance(pState++, Index, rules_player(pRules, pBoard));
 
         BitReset64(&Indices, Index);
     }
@@ -74,12 +73,12 @@ tBoard *rules_next_states(tRules *pRules, tBoard *pBoard, tSize *pSize, bool Onl
     return pStates;
 }
 
-void rules_simulate_playout(tRules *pRules, tBoard *pBoard, tRandom *pRand, bool OnlyNeighbors)
+void rules_simulate_playout(tRules *pRules, tBoard *pBoard, tRandom *pRandom, bool OnlyNeighbors)
 {
     while (NOT board_finished(pBoard))
     {
         uint64_t Indices = rules_indices(pRules, pBoard, OnlyNeighbors);
-        tIndex Index = BitScanRandom64(Indices, pRand);
+        tIndex Index = BitScanRandom64(Indices, pRandom);
 
         board_advance(pBoard, Index, rules_player(pRules, pBoard));
     }
@@ -87,7 +86,7 @@ void rules_simulate_playout(tRules *pRules, tBoard *pBoard, tRandom *pRand, bool
 
 char *rules_moves_string(tRules *pRules, int *pMoves, int Size)
 {
-    char *Str = emalloc(sizeof(char)*RULES_MOVES_STR_LEN), *pBegin = Str;
+    char *Str = emalloc(RULES_MOVES_STR_LEN * sizeof(char)), *pBegin = Str;
     tSize Move = 1;
     bool StartedMove = false;
 
@@ -154,7 +153,7 @@ static bool rules_index_player(tRules *pRules, tIndex Index)
 
     if (NOT board_index_valid(Index))
     {
-        dbg_printf(DEBUG_LEVEL_WARN, "Invalid index");
+        dbg_printf(DEBUG_LEVEL_WARN, "Cannot get player for board index out of bounds");
         goto Error;
     }
 
@@ -185,7 +184,7 @@ static void rules_load(tRules *pRules, eRulesType RulesType)
         }
         default: 
         {
-            dbg_printf(DEBUG_LEVEL_ERROR, "Invalid rules type");
+            dbg_printf(DEBUG_LEVEL_ERROR, "Cannot load rules for invalid rules type");
             break;
         }
     }

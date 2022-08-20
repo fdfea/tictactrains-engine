@@ -52,8 +52,6 @@ int vector_init_items_capacity(tVector *pVector, void **ppItems, tSize Size, tSi
     pVector->Size = Size;
     pVector->Capacity = Capacity;
 
-    dbg_printf(DEBUG_LEVEL_INFO, "Initialized vector, size: %d, capacity: %d", pVector->Size, pVector->Capacity);
-
 Error:
     return Res;
 }
@@ -61,7 +59,6 @@ Error:
 void vector_free(tVector *pVector)
 {
     free(pVector->ppItems);
-    dbg_printf(DEBUG_LEVEL_INFO, "Freed vector");
 }
 
 tSize vector_size(tVector *pVector)
@@ -101,8 +98,6 @@ bool vector_add(tVector *pVector, void *pItem)
     pVector->Size = Resize;
     Added = true;
 
-    dbg_printf(DEBUG_LEVEL_INFO, "Added item to vector, size: %d, capacity: %d", pVector->Size, pVector->Capacity);
-
 Error:
     return Added;
 }
@@ -130,8 +125,6 @@ bool vector_merge(tVector *pVector, tVector *pV)
     pVector->Size = Resize;
     Merged = true;
 
-    dbg_printf(DEBUG_LEVEL_INFO, "Merged items to vector, size: %d, capacity: %d", pVector->Size, pVector->Capacity);
-
 Error:
     return Merged;
 }
@@ -158,14 +151,12 @@ void *vector_set(tVector *pVector, tIndex Index, void *pItem)
 
     if (Index >= vector_size(pVector))
     {
-        dbg_printf(DEBUG_LEVEL_WARN, "Cannot set item in vector to index out of bounds");
+        dbg_printf(DEBUG_LEVEL_WARN, "Cannot set item in vector at index out of bounds");
         goto Error;
     }
 
     pTmp = pVector->ppItems[Index];
     pVector->ppItems[Index] = pItem;
-
-    dbg_printf(DEBUG_LEVEL_INFO, "Set item at index: %d", Index);
 
 Error:
     return pTmp;
@@ -188,38 +179,20 @@ void *vector_take(tVector *pVector, tIndex Index)
 
     pVector->Size = Resize;
 
-    dbg_printf(DEBUG_LEVEL_INFO, "Took item at index: %d, size: %d, capacity: %d", Index, pVector->Size, pVector->Capacity);
-
 Error:
     return pItem;
 }
 
-void vector_shuffle(tVector *pVector, tRandom *pRand)
+void vector_shuffle(tVector *pVector, tRandom *pRandom)
 {
     void *pTmp;
     tIndex i, j;
 
     for (i = vector_size(pVector) - 1; i > 0; --i) 
     {
-        j = random_next(pRand) % (i + 1);
+        j = random_next(pRandom) % (i + 1);
         pTmp = vector_set(pVector, j, vector_get(pVector, i));
         (void) vector_set(pVector, i, pTmp);
-    }
-}
-
-void vector_map(tVector *pVector, tMapFunction *pFunction)
-{
-    for (tIndex i = 0; i < vector_size(pVector); ++i)
-    {
-        pVector->ppItems[i] = (*pFunction)(pVector->ppItems[i]);
-    }
-}
-
-void vector_foreach(tVector *pVector, tEffectFunction *pFunction)
-{
-    for (tIndex i = 0; i < vector_size(pVector); ++i)
-    {
-       (*pFunction)(pVector->ppItems[i]);
     }
 }
 
@@ -240,7 +213,6 @@ static void vector_resize(tVector *pVector, tSize Size, bool Grow)
 
     if (Resize != Capacity)
     {
-        dbg_printf(DEBUG_LEVEL_INFO, "Resizing vector from %d to %d", pVector->Capacity, Resize);
         pVector->ppItems = erealloc(pVector->ppItems, Resize * sizeof(void *));
         pVector->Capacity = Resize;
     }

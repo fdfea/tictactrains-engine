@@ -7,7 +7,7 @@
 
 bool BitEmpty64(uint64_t Bits)
 {
-    Bits == 0ULL;
+    return Bits == 0ULL;
 }
 
 bool BitTest64(uint64_t Bits, tIndex Index)
@@ -67,7 +67,7 @@ tIndex BitKthSetIndex64(uint64_t Bits, uint64_t K)
     return S - 1;
 }
 
-tIndex BitScanRandom64(uint64_t Bits, tRandom *pRand)
+tIndex BitScanRandom64(uint64_t Bits, tRandom *pRandom)
 {
-    return BitKthSetIndex64(Bits, rand_next(pRand) % BitPopCount64(Bits) + 1);
+    return BitKthSetIndex64(Bits, random_next(pRandom) % BitPopCount64(Bits) + 1);
 }

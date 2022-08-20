@@ -158,7 +158,7 @@ int ttt_get_player_move(tTTT *pGame, bool ComputerPlaying)
     bool Player = ttt_get_player(pGame);
     uint64_t Indices = rules_indices(&pGame->Rules, &pGame->Board, true);
 
-    char (*pId)[BOARD_ID_STR_LEN] = emalloc(sizeof(char)*BOARD_ID_STR_LEN);
+    char (*pId)[BOARD_ID_STR_LEN] = emalloc(BOARD_ID_STR_LEN * sizeof(char));
 
     while (true)
     {
@@ -230,7 +230,7 @@ int ttt_give_move(tTTT *pGame, int Index)
         OR NOT BitTest64(Indices, Index))
     {
         Res = -EINVAL;
-        dbg_printf(DEBUG_LEVEL_ERROR, "Invalid move attempted");
+        dbg_printf(DEBUG_LEVEL_ERROR, "Cannot make move at invalid index");
         goto Error;
     }
 
@@ -275,8 +275,8 @@ int *ttt_get_moves(tTTT *pGame, int *pSize)
 static int ttt_load_moves(tTTT *pGame, tVector *pMoves)
 {
     int Res = 0;
-
     tBoard BoardCopy;
+
     board_init(&BoardCopy);
     board_copy(&BoardCopy, &pGame->Board);
 
@@ -286,7 +286,7 @@ static int ttt_load_moves(tTTT *pGame, tVector *pMoves)
         if (Res < 0)
         {
             board_copy(&pGame->Board, &BoardCopy);
-            dbg_printf(DEBUG_LEVEL_ERROR, "Failed to load moves");
+            dbg_printf(DEBUG_LEVEL_ERROR, "Failed to load starting moves");
             goto Error;
         }
     }

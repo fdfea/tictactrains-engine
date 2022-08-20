@@ -7,7 +7,7 @@
 #include "config.h"
 #include "mcts.h"
 #include "rules.h"
-#include "vector.h"
+#include "types.h"
 
 typedef struct TTT
 {

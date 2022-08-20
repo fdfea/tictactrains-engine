@@ -3,11 +3,11 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <string.h>
 
 #include "board.h"
 #include "mctn.h"
 #include "mctnlist.h"
+#include "types.h"
 #include "util.h"
 
 static uint32_t mctn_size(tMctn *pNode);
@@ -16,7 +16,7 @@ static float uct(tVisits ParentVisits, tVisits Visits, float Score);
 void mctn_init(tMctn *pNode, tBoard *pBoard)
 {
     board_copy(&pNode->State, pBoard);
-    memset(&pNode->Children, 0, sizeof(tMctnList));
+    mctnlist_init(&pNode->Children);
 
     pNode->Visits = 0;
     pNode->Score = 0.0f;
@@ -40,7 +40,7 @@ void mctn_update(tMctn *pNode, float Score)
 
 void mctn_expand(tMctn *pNode, tBoard *pStates, tSize Size)
 {
-    mctnlist_init(&pNode->Children, pStates, Size);
+    mctnlist_expand(&pNode->Children, pStates, Size);
 }
 
 bool mctn_equals(tMctn *pNode, tMctn *pN)
@@ -48,14 +48,14 @@ bool mctn_equals(tMctn *pNode, tMctn *pN)
     return board_equals(&pNode->State, &pN->State);
 }
 
-tMctn *mctn_random_child(tMctn *pNode, tRandom *pRand)
+tMctn *mctn_random_child(tMctn *pNode, tRandom *pRandom)
 {
     tMctn *pChild = NULL;
     tSize Size = mctnlist_size(&pNode->Children);
 
     if (Size > 0)
     {
-        pChild = mctnlist_get(&pNode->Children, rand_next(pRand) % Size);
+        pChild = mctnlist_get(&pNode->Children, random_next(pRandom) % Size);
     }
 
     return pChild;
@@ -91,10 +91,10 @@ tMctn *mctn_best_child_uct(tMctn *pNode)
 
 char *mctn_string(tMctn *pNode)
 {
-    char *pStr = emalloc(sizeof(char)*MCTN_STR_LEN), *pBegin = pStr, *pId = NULL;
+    char *Str = emalloc(MCTN_STR_LEN * sizeof(char)), *pBegin = Str, *pId = NULL;
     tVisits Visits = pNode->Visits;
 
-    pStr += sprintf(pStr, "Tree size: %d, Root score: %.2f/%d\n",
+    Str += sprintf(Str, "Tree size: %d, Root score: %.2f/%d\n",
         mctn_size(pNode), pNode->Score, Visits);
 
     for (tIndex i = 0; i < mctnlist_size(&pNode->Children); ++i)
@@ -104,7 +104,7 @@ char *mctn_string(tMctn *pNode)
 
         float Eval = IF (pChild->Visits > 0) THEN pChild->Score/pChild->Visits ELSE 0.0f;
         
-        pStr += sprintf(pStr, "%s: %0.2f @ %.2f/%d ** %d Nodes ** %3.3e UCT\n", 
+        Str += sprintf(Str, "%s: %0.2f @ %.2f/%d ** %d Nodes ** %3.3e UCT\n", 
             pId, Eval, pChild->Score, pChild->Visits, mctn_size(pChild), 
             UCT(Visits, pChild->Visits, pChild->Score));
 

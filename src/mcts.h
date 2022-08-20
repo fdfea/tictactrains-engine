@@ -20,7 +20,7 @@ typedef struct Mcts
 {
     tMctn *pRoot;
     tRules *pRules;
-    tRandom Rand;
+    tRandom Random;
     tMctsConfig Config;
     bool Player;
 } 

@@ -41,7 +41,7 @@ void mcts_init(tMcts *pMcts, tRules *pRules, tBoard *pState, tMctsConfig *pConfi
     pMcts->Config = *pConfig;
 
     mctn_init(pMcts->pRoot, pState);
-    rand_init(&pMcts->Rand);
+    random_init(&pMcts->Random);
 }
 
 void mcts_config_init(tMctsConfig *pConfig)
@@ -59,28 +59,24 @@ void mcts_free(tMcts *pMcts)
 
 void mcts_simulate(tMcts *pMcts)
 {
-    //set simulations to pRoot visits?
-    tVisits Count = 0, Simulations = pMcts->Config.Simulations;
+    tVisits Count = pMcts->pRoot->Visits, Start = Count, Simulations = pMcts->Config.Simulations;
 
 #ifdef TIMED
     struct timespec Begin, End;
     clock_gettime(CLOCK_REALTIME, &Begin);
 #endif
 
-    while (Count < Simulations AND pMcts->pRoot->Visits < TVISITS_MAX) 
+    while (Count++ < Simulations) 
     {
         mcts_simulation(pMcts, pMcts->pRoot);
-        Count++;
     }
 
 #ifdef TIMED
     clock_gettime(CLOCK_REALTIME, &End);
-    double Diff = time_diff_ms(&Begin, &End);
-    printf("Simulations: %d, Time elapsed: %.3lf ms\n", Count, Diff);
+    printf("Simulations: %d, Time elapsed: %.3lf ms\n", Count - Start, time_diff_ms(&Begin, &End));
 #endif
 }
 
-//should this return a pointer?
 tBoard *mcts_get_state(tMcts *pMcts)
 {
     tBoard *pBoard = NULL;
@@ -88,7 +84,7 @@ tBoard *mcts_get_state(tMcts *pMcts)
     if (NOT board_finished(&pMcts->pRoot->State)
         AND NOT mctnlist_empty(&pMcts->pRoot->Children))
     {
-        pBoard = &mctn_most_visited_child(pMcts->pRoot, &pMcts->Rand)->State;
+        pBoard = &mctn_most_visited_child(pMcts->pRoot, &pMcts->Random)->State;
     }
     else
     {
@@ -101,16 +97,17 @@ tBoard *mcts_get_state(tMcts *pMcts)
 void mcts_give_state(tMcts *pMcts, tBoard *pState)
 {
     tRules *pRules = pMcts->pRules;
-    tMctn Tmp, *pTmp = &Tmp;
-    mctn_init(pTmp, pState);
+    tMctn Tmp;
 
-    //should keep stats from previous node
+    mctn_init(&Tmp, pState);
+
     if (NOT board_finished(&pMcts->pRoot->State))
     {
-        mctnlist_delete(&pMcts->pRoot->Children, pTmp);
+        Tmp = mctnlist_delete(&pMcts->pRoot->Children, Tmp);
+
         mctn_free(pMcts->pRoot);
 
-        pMcts->pRoot = pTmp;
+        *pMcts->pRoot = Tmp;
         pMcts->Player = rules_player(pRules, &pMcts->pRoot->State);
     }
 }
@@ -135,7 +132,7 @@ static void mcts_expand_node(tMcts *pMcts, tMctn *pNode)
     tBoard* pStates = rules_next_states(pMcts->pRules, &pNode->State, &Size, pMcts->Config.SearchOnlyNeighbors);
 
     mctn_expand(pNode, pStates, Size);
-    mctnlist_shuffle(&pNode->Children, &pMcts->Rand);
+    mctnlist_shuffle(&pNode->Children, &pMcts->Random);
     free(pStates);
 }
 
@@ -144,14 +141,14 @@ static float mcts_simulation(tMcts *pMcts, tMctn *pNode)
     float Res;
     tRules *pRules = pMcts->pRules;
     tBoard *pState = &pNode->State;
-    tRandom *pRand = &pMcts->Rand;
+    tRandom *pRandom = &pMcts->Random;
 
     if (mctn_list_empty(&pNode->Children))
     {
         if (NOT board_finished(pState))
         {
             mcts_expand_node(pMcts, pNode);
-            Res = mcts_simulate_playout(pMcts, &mctn_random_child(pNode, pRand)->State);
+            Res = mcts_simulate_playout(pMcts, &mctn_random_child(pNode, pRandom)->State);
         }
         else 
         {
@@ -180,7 +177,7 @@ static float mcts_simulate_playout(tMcts *pMcts, tBoard *pState)
     tBoard Board;
 
     board_copy(&Board, pState);
-    rules_simulate_playout(pMcts->pRules, &Board, &pMcts->Rand, true);
+    rules_simulate_playout(pMcts->pRules, &Board, &pMcts->Random, true);
     
     Score = mcts_weight_score(board_score(&Board, pMcts->Config.ScoringAlgorithm));
     Res = IF (pMcts->Player) THEN Score ELSE (1.0f - Score);
