@@ -69,6 +69,74 @@ static const uint64_t IndexLookup[ROWS*COLUMNS][2] = {
 #define ADJACENT_INDICES(i)     (IndexLookup[i][0])
 #define NEIGHBOR_INDICES(i)     (IndexLookup[i][1])
 
+typedef struct IndexLookup
+{
+    bool LeftValid, RightValid, TopValid, BottomValid;
+    tIndex Left, Right, Top, Bottom;
+}
+tIndexLookup;
+
+static const tIndexLookup __IndexLookup[ROWS*COLUMNS] = {
+    { false, true , false, true , 0x00, 0x01, 0x00, 0x07 },
+    { true , true , false, true , 0x00, 0x02, 0x00, 0x08 },
+    { true , true , false, true , 0x01, 0x03, 0x00, 0x09 },
+    { true , true , false, true , 0x02, 0x04, 0x00, 0x0a },
+    { true , true , false, true , 0x03, 0x05, 0x00, 0x0b },
+    { true , true , false, true , 0x04, 0x06, 0x00, 0x0c },
+    { true , false, false, true , 0x05, 0x00, 0x00, 0x0d },
+    { false, true , true , true , 0x00, 0x08, 0x00, 0x0e },
+    { true , true , true , true , 0x07, 0x09, 0x01, 0x0f },
+    { true , true , true , true , 0x08, 0x0a, 0x02, 0x10 },
+    { true , true , true , true , 0x09, 0x0b, 0x03, 0x11 },
+    { true , true , true , true , 0x0a, 0x0c, 0x04, 0x12 },
+    { true , true , true , true , 0x0b, 0x0d, 0x05, 0x13 },
+    { true , false, true , true , 0x0c, 0x00, 0x06, 0x14 },
+    { false, true , true , true , 0x00, 0x0f, 0x07, 0x15 },
+    { true , true , true , true , 0x0e, 0x10, 0x08, 0x16 },
+    { true , true , true , true , 0x0f, 0x11, 0x09, 0x17 },
+    { true , true , true , true , 0x10, 0x12, 0x0a, 0x18 },
+    { true , true , true , true , 0x11, 0x13, 0x0b, 0x19 },
+    { true , true , true , true , 0x12, 0x14, 0x0c, 0x1a },
+    { true , false, true , true , 0x13, 0x00, 0x0d, 0x1b },
+    { false, true , true , true , 0x00, 0x16, 0x0e, 0x1c },
+    { true , true , true , true , 0x15, 0x17, 0x0f, 0x1d },
+    { true , true , true , true , 0x16, 0x18, 0x10, 0x1e },
+    { true , true , true , true , 0x17, 0x19, 0x11, 0x1f },
+    { true , true , true , true , 0x18, 0x1a, 0x12, 0x20 },
+    { true , true , true , true , 0x19, 0x1b, 0x13, 0x21 },
+    { true , false, true , true , 0x1a, 0x00, 0x14, 0x22 },
+    { false, true , true , true , 0x00, 0x1d, 0x15, 0x23 },
+    { true , true , true , true , 0x1c, 0x1e, 0x16, 0x24 },
+    { true , true , true , true , 0x1d, 0x1f, 0x17, 0x25 },
+    { true , true , true , true , 0x1e, 0x20, 0x18, 0x26 },
+    { true , true , true , true , 0x1f, 0x21, 0x19, 0x27 },
+    { true , true , true , true , 0x20, 0x22, 0x1a, 0x28 },
+    { true , false, true , true , 0x21, 0x00, 0x1b, 0x29 },
+    { false, true , true , true , 0x00, 0x24, 0x1c, 0x2a },
+    { true , true , true , true , 0x23, 0x25, 0x1d, 0x2b },
+    { true , true , true , true , 0x24, 0x26, 0x1e, 0x2c },
+    { true , true , true , true , 0x25, 0x27, 0x1f, 0x2d },
+    { true , true , true , true , 0x26, 0x28, 0x20, 0x2e },
+    { true , true , true , true , 0x27, 0x29, 0x21, 0x2f },
+    { true , false, true , true , 0x28, 0x00, 0x22, 0x30 },
+    { false, true , true , false, 0x00, 0x2b, 0x23, 0x00 },
+    { true , true , true , false, 0x2a, 0x2c, 0x24, 0x00 },
+    { true , true , true , false, 0x2b, 0x2d, 0x25, 0x00 },
+    { true , true , true , false, 0x2c, 0x2e, 0x26, 0x00 },
+    { true , true , true , false, 0x2d, 0x2f, 0x27, 0x00 },
+    { true , true , true , false, 0x2e, 0x30, 0x28, 0x00 },
+    { true , false, true , false, 0x2f, 0x00, 0x29, 0x00 },
+};
+
+#define LEFT_VALID(i)   (__IndexLookup[i].LeftValid)
+#define RIGHT_VALID(i)  (__IndexLookup[i].RightValid)
+#define TOP_VALID(i)    (__IndexLookup[i].TopValid)
+#define BOTTOM_VALID(i) (__IndexLookup[i].BottomValid)
+#define LEFT(i)         (__IndexLookup[i].Left)
+#define RIGHT(i)        (__IndexLookup[i].Right)
+#define TOP(i)          (__IndexLookup[i].Top)
+#define BOTTOM(i)       (__IndexLookup[i].Bottom)
+
 static tScore board_optimal_score(tBoard *pBoard);
 static tScore board_quick_score(tBoard *pBoard);
 
@@ -79,6 +147,11 @@ static bool board_index_traversable(tBoard *pBoard, tIndex Index, bool Player, u
 static tSize board_index_longest_path(tBoard *pBoard, tIndex Index, uint64_t Checked);
 static tSize board_index_checked_path(tBoard *pBoard, tIndex Index, uint64_t Checked, uint64_t *pPath);
 static tSize board_index_adjacent_count(uint64_t Checked, tIndex Index);
+
+static bool board_traverse_left(tBoard *pBoard, tIndex Index, bool Player, uint64_t Checked);
+static bool board_traverse_right(tBoard *pBoard, tIndex Index, bool Player, uint64_t Checked);
+static bool board_traverse_top(tBoard *pBoard, tIndex Index, bool Player, uint64_t Checked);
+static bool board_traverse_bottom(tBoard *pBoard, tIndex Index, bool Player, uint64_t Checked);
 
 void board_init(tBoard *pBoard)
 {
@@ -350,6 +423,7 @@ static bool board_index_traversable(tBoard *pBoard, tIndex Index, bool Player, u
         AND NOT BitTest64(Checked, Index);
 }
 
+/*
 static tSize board_index_longest_path(tBoard *pBoard, tIndex Index, uint64_t Checked)
 {
     tSize MaxPathLen = 0;
@@ -372,7 +446,39 @@ static tSize board_index_longest_path(tBoard *pBoard, tIndex Index, uint64_t Che
 
     return MaxPathLen + 1;
 }
+*/
 
+static tSize board_index_longest_path(tBoard *pBoard, tIndex Index, uint64_t Checked)
+{
+    tSize MaxPathLen = 0;
+    bool Player = board_index_player(pBoard, Index);
+    BitSet64(&Checked, Index);
+
+    if (board_traverse_left(pBoard, Index, Player, Checked))
+    {
+        tSize PathLen = board_index_longest_path(pBoard, LEFT(Index), Checked);
+        SET_IF_GREATER(PathLen, MaxPathLen);
+    }
+    if (board_traverse_right(pBoard, Index, Player, Checked))
+    {
+        tSize PathLen = board_index_longest_path(pBoard, RIGHT(Index), Checked);
+        SET_IF_GREATER(PathLen, MaxPathLen);
+    }
+    if (board_traverse_top(pBoard, Index, Player, Checked))
+    {
+        tSize PathLen = board_index_longest_path(pBoard, TOP(Index), Checked);
+        SET_IF_GREATER(PathLen, MaxPathLen);
+    }
+    if (board_traverse_bottom(pBoard, Index, Player, Checked))
+    {
+        tSize PathLen = board_index_longest_path(pBoard, BOTTOM(Index), Checked);
+        SET_IF_GREATER(PathLen, MaxPathLen);
+    }
+
+    return 1 + MaxPathLen;
+}
+
+/*
 static tSize board_index_checked_path(tBoard *pBoard, tIndex Index, uint64_t Checked, uint64_t *pPath)
 {
     tSize MaxPathLen = 0;
@@ -400,6 +506,44 @@ static tSize board_index_checked_path(tBoard *pBoard, tIndex Index, uint64_t Che
 
     return MaxPathLen + 1;
 }
+*/
+
+static tSize board_index_checked_path(tBoard *pBoard, tIndex Index, uint64_t Checked, uint64_t *pPath)
+{
+    tSize MaxPathLen = 0;
+    uint64_t MaxPath, ThisPath = 0ULL;
+    bool Player = board_index_player(pBoard, Index);
+    BitSet64(&ThisPath, Index);
+    Checked |= MaxPath = ThisPath;
+
+    if (board_traverse_left(pBoard, Index, Player, Checked))
+    {
+        uint64_t Path = ThisPath;
+        tSize PathLen = board_index_checked_path(pBoard, LEFT(Index), Checked, &Path);
+        SET_IF_GREATER_W_EXTRA(PathLen, MaxPathLen, Path, MaxPath);
+    }
+    if (board_traverse_right(pBoard, Index, Player, Checked))
+    {
+        uint64_t Path = ThisPath;
+        tSize PathLen = board_index_checked_path(pBoard, RIGHT(Index), Checked, &Path);
+        SET_IF_GREATER_W_EXTRA(PathLen, MaxPathLen, Path, MaxPath);
+    }
+    if (board_traverse_top(pBoard, Index, Player, Checked))
+    {
+        uint64_t Path = ThisPath;
+        tSize PathLen = board_index_checked_path(pBoard, TOP(Index), Checked, &Path);
+        SET_IF_GREATER_W_EXTRA(PathLen, MaxPathLen, Path, MaxPath);
+    }
+    if (board_traverse_bottom(pBoard, Index, Player, Checked))
+    {
+        uint64_t Path = ThisPath;
+        tSize PathLen = board_index_checked_path(pBoard, BOTTOM(Index), Checked, &Path);
+        SET_IF_GREATER_W_EXTRA(PathLen, MaxPathLen, Path, MaxPath);
+    }
+    
+    *pPath |= MaxPath;
+    return 1 + MaxPathLen;
+}
 
 static tSize board_index_adjacent_count(uint64_t Data, tIndex Index)
 {
@@ -419,4 +563,32 @@ static tSize board_index_adjacent_count(uint64_t Data, tIndex Index)
     }
 
     return AdjacentCount;
+}
+
+static bool board_traverse_left(tBoard *pBoard, tIndex Index, bool Player, uint64_t Checked)
+{
+    return LEFT_VALID(Index) AND NOT board_index_empty(pBoard, LEFT(Index)) 
+        AND board_index_player(pBoard, LEFT(Index)) == Player 
+        AND NOT BitTest64(Checked, LEFT(Index));
+}
+
+static bool board_traverse_right(tBoard *pBoard, tIndex Index, bool Player, uint64_t Checked)
+{
+    return RIGHT_VALID(Index) AND NOT board_index_empty(pBoard, RIGHT(Index)) 
+        AND board_index_player(pBoard, RIGHT(Index)) == Player 
+        AND NOT BitTest64(Checked, RIGHT(Index));
+}
+
+static bool board_traverse_top(tBoard *pBoard, tIndex Index, bool Player, uint64_t Checked)
+{
+    return TOP_VALID(Index) AND NOT board_index_empty(pBoard, TOP(Index)) 
+        AND board_index_player(pBoard, TOP(Index)) == Player  
+        AND NOT BitTest64(Checked, TOP(Index));
+}
+
+static bool board_traverse_bottom(tBoard *pBoard, tIndex Index, bool Player, uint64_t Checked)
+{
+    return BOTTOM_VALID(Index) AND NOT board_index_empty(pBoard, BOTTOM(Index)) 
+        AND board_index_player(pBoard, BOTTOM(Index)) == Player 
+        AND NOT BitTest64(Checked, BOTTOM(Index));
 }
