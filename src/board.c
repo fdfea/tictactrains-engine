@@ -14,61 +14,6 @@
 #define BOARD_LAST_MOVE_INDEX       56
 #define BOARD_MIN_NEIGHBOR_INDICES  6
 
-static const uint64_t IndexLookup[ROWS*COLUMNS][2] = {
-    { 0x0000000000000082ULL, 0x0000000000000182ULL },
-    { 0x0000000000000105ULL, 0x0000000000000385ULL },
-    { 0x000000000000020AULL, 0x000000000000070AULL },
-    { 0x0000000000000414ULL, 0x0000000000000E14ULL },
-    { 0x0000000000000828ULL, 0x0000000000001C28ULL },
-    { 0x0000000000001050ULL, 0x0000000000003850ULL },
-    { 0x0000000000002020ULL, 0x0000000000003020ULL },
-    { 0x0000000000004101ULL, 0x000000000000C103ULL },
-    { 0x0000000000008282ULL, 0x000000000001C287ULL },
-    { 0x0000000000010504ULL, 0x000000000003850EULL },
-    { 0x0000000000020A08ULL, 0x0000000000070A1CULL },
-    { 0x0000000000041410ULL, 0x00000000000E1438ULL },
-    { 0x0000000000082820ULL, 0x00000000001C2870ULL },
-    { 0x0000000000101040ULL, 0x0000000000181060ULL },
-    { 0x0000000000208080ULL, 0x0000000000608180ULL },
-    { 0x0000000000414100ULL, 0x0000000000E14380ULL },
-    { 0x0000000000828200ULL, 0x0000000001C28700ULL },
-    { 0x0000000001050400ULL, 0x0000000003850E00ULL },
-    { 0x00000000020A0800ULL, 0x00000000070A1C00ULL },
-    { 0x0000000004141000ULL, 0x000000000E143800ULL },
-    { 0x0000000008082000ULL, 0x000000000C083000ULL },
-    { 0x0000000010404000ULL, 0x000000003040C000ULL },
-    { 0x0000000020A08000ULL, 0x0000000070A1C000ULL },
-    { 0x0000000041410000ULL, 0x00000000E1438000ULL },
-    { 0x0000000082820000ULL, 0x00000001C2870000ULL },
-    { 0x0000000105040000ULL, 0x00000003850E0000ULL },
-    { 0x000000020A080000ULL, 0x000000070A1C0000ULL },
-    { 0x0000000404100000ULL, 0x0000000604180000ULL },
-    { 0x0000000820200000ULL, 0x0000001820600000ULL },
-    { 0x0000001050400000ULL, 0x0000003850E00000ULL },
-    { 0x00000020A0800000ULL, 0x00000070A1C00000ULL },
-    { 0x0000004141000000ULL, 0x000000E143800000ULL },
-    { 0x0000008282000000ULL, 0x000001C287000000ULL },
-    { 0x0000010504000000ULL, 0x000003850E000000ULL },
-    { 0x0000020208000000ULL, 0x000003020C000000ULL },
-    { 0x0000041010000000ULL, 0x00000C1030000000ULL },
-    { 0x0000082820000000ULL, 0x00001C2870000000ULL },
-    { 0x0000105040000000ULL, 0x00003850E0000000ULL },
-    { 0x000020A080000000ULL, 0x000070A1C0000000ULL },
-    { 0x0000414100000000ULL, 0x0000E14380000000ULL },
-    { 0x0000828200000000ULL, 0x0001C28700000000ULL },
-    { 0x0001010400000000ULL, 0x0001810600000000ULL },
-    { 0x0000080800000000ULL, 0x0000081800000000ULL },
-    { 0x0000141000000000ULL, 0x0000143800000000ULL },
-    { 0x0000282000000000ULL, 0x0000287000000000ULL },
-    { 0x0000504000000000ULL, 0x000050E000000000ULL },
-    { 0x0000A08000000000ULL, 0x0000A1C000000000ULL },
-    { 0x0001410000000000ULL, 0x0001438000000000ULL },
-    { 0x0000820000000000ULL, 0x0000830000000000ULL },
-};
-
-#define ADJACENT_INDICES(i)     (IndexLookup[i][0])
-#define NEIGHBOR_INDICES(i)     (IndexLookup[i][1])
-
 typedef struct IndexLookup
 {
     bool LeftValid, RightValid, TopValid, BottomValid;
@@ -76,7 +21,7 @@ typedef struct IndexLookup
 }
 tIndexLookup;
 
-static const tIndexLookup __IndexLookup[ROWS*COLUMNS] = {
+static const tIndexLookup IndexLookup[ROWS*COLUMNS] = {
     { false, true , false, true , 0x00, 0x01, 0x00, 0x07 },
     { true , true , false, true , 0x00, 0x02, 0x00, 0x08 },
     { true , true , false, true , 0x01, 0x03, 0x00, 0x09 },
@@ -128,14 +73,69 @@ static const tIndexLookup __IndexLookup[ROWS*COLUMNS] = {
     { true , false, true , false, 0x2f, 0x00, 0x29, 0x00 },
 };
 
-#define LEFT_VALID(i)   (__IndexLookup[i].LeftValid)
-#define RIGHT_VALID(i)  (__IndexLookup[i].RightValid)
-#define TOP_VALID(i)    (__IndexLookup[i].TopValid)
-#define BOTTOM_VALID(i) (__IndexLookup[i].BottomValid)
-#define LEFT(i)         (__IndexLookup[i].Left)
-#define RIGHT(i)        (__IndexLookup[i].Right)
-#define TOP(i)          (__IndexLookup[i].Top)
-#define BOTTOM(i)       (__IndexLookup[i].Bottom)
+static const uint64_t IndicesLookup[ROWS*COLUMNS][2] = {
+    { 0x0000000000000082ULL, 0x0000000000000182ULL },
+    { 0x0000000000000105ULL, 0x0000000000000385ULL },
+    { 0x000000000000020AULL, 0x000000000000070AULL },
+    { 0x0000000000000414ULL, 0x0000000000000E14ULL },
+    { 0x0000000000000828ULL, 0x0000000000001C28ULL },
+    { 0x0000000000001050ULL, 0x0000000000003850ULL },
+    { 0x0000000000002020ULL, 0x0000000000003020ULL },
+    { 0x0000000000004101ULL, 0x000000000000C103ULL },
+    { 0x0000000000008282ULL, 0x000000000001C287ULL },
+    { 0x0000000000010504ULL, 0x000000000003850EULL },
+    { 0x0000000000020A08ULL, 0x0000000000070A1CULL },
+    { 0x0000000000041410ULL, 0x00000000000E1438ULL },
+    { 0x0000000000082820ULL, 0x00000000001C2870ULL },
+    { 0x0000000000101040ULL, 0x0000000000181060ULL },
+    { 0x0000000000208080ULL, 0x0000000000608180ULL },
+    { 0x0000000000414100ULL, 0x0000000000E14380ULL },
+    { 0x0000000000828200ULL, 0x0000000001C28700ULL },
+    { 0x0000000001050400ULL, 0x0000000003850E00ULL },
+    { 0x00000000020A0800ULL, 0x00000000070A1C00ULL },
+    { 0x0000000004141000ULL, 0x000000000E143800ULL },
+    { 0x0000000008082000ULL, 0x000000000C083000ULL },
+    { 0x0000000010404000ULL, 0x000000003040C000ULL },
+    { 0x0000000020A08000ULL, 0x0000000070A1C000ULL },
+    { 0x0000000041410000ULL, 0x00000000E1438000ULL },
+    { 0x0000000082820000ULL, 0x00000001C2870000ULL },
+    { 0x0000000105040000ULL, 0x00000003850E0000ULL },
+    { 0x000000020A080000ULL, 0x000000070A1C0000ULL },
+    { 0x0000000404100000ULL, 0x0000000604180000ULL },
+    { 0x0000000820200000ULL, 0x0000001820600000ULL },
+    { 0x0000001050400000ULL, 0x0000003850E00000ULL },
+    { 0x00000020A0800000ULL, 0x00000070A1C00000ULL },
+    { 0x0000004141000000ULL, 0x000000E143800000ULL },
+    { 0x0000008282000000ULL, 0x000001C287000000ULL },
+    { 0x0000010504000000ULL, 0x000003850E000000ULL },
+    { 0x0000020208000000ULL, 0x000003020C000000ULL },
+    { 0x0000041010000000ULL, 0x00000C1030000000ULL },
+    { 0x0000082820000000ULL, 0x00001C2870000000ULL },
+    { 0x0000105040000000ULL, 0x00003850E0000000ULL },
+    { 0x000020A080000000ULL, 0x000070A1C0000000ULL },
+    { 0x0000414100000000ULL, 0x0000E14380000000ULL },
+    { 0x0000828200000000ULL, 0x0001C28700000000ULL },
+    { 0x0001010400000000ULL, 0x0001810600000000ULL },
+    { 0x0000080800000000ULL, 0x0000081800000000ULL },
+    { 0x0000141000000000ULL, 0x0000143800000000ULL },
+    { 0x0000282000000000ULL, 0x0000287000000000ULL },
+    { 0x0000504000000000ULL, 0x000050E000000000ULL },
+    { 0x0000A08000000000ULL, 0x0000A1C000000000ULL },
+    { 0x0001410000000000ULL, 0x0001438000000000ULL },
+    { 0x0000820000000000ULL, 0x0000830000000000ULL },
+};
+
+#define LEFT_VALID(i)   (IndexLookup[i].LeftValid)
+#define RIGHT_VALID(i)  (IndexLookup[i].RightValid)
+#define TOP_VALID(i)    (IndexLookup[i].TopValid)
+#define BOTTOM_VALID(i) (IndexLookup[i].BottomValid)
+#define LEFT(i)         (IndexLookup[i].Left)
+#define RIGHT(i)        (IndexLookup[i].Right)
+#define TOP(i)          (IndexLookup[i].Top)
+#define BOTTOM(i)       (IndexLookup[i].Bottom)
+
+#define ADJACENT_INDICES(i)     (IndicesLookup[i][0])
+#define NEIGHBOR_INDICES(i)     (IndicesLookup[i][1])
 
 static tScore board_optimal_score(tBoard *pBoard);
 static tScore board_quick_score(tBoard *pBoard);
@@ -147,11 +147,6 @@ static bool board_index_traversable(tBoard *pBoard, tIndex Index, bool Player, u
 static tSize board_index_longest_path(tBoard *pBoard, tIndex Index, uint64_t Checked);
 static tSize board_index_checked_path(tBoard *pBoard, tIndex Index, uint64_t Checked, uint64_t *pPath);
 static tSize board_index_adjacent_count(uint64_t Checked, tIndex Index);
-
-static bool board_traverse_left(tBoard *pBoard, tIndex Index, bool Player, uint64_t Checked);
-static bool board_traverse_right(tBoard *pBoard, tIndex Index, bool Player, uint64_t Checked);
-static bool board_traverse_top(tBoard *pBoard, tIndex Index, bool Player, uint64_t Checked);
-static bool board_traverse_bottom(tBoard *pBoard, tIndex Index, bool Player, uint64_t Checked);
 
 void board_init(tBoard *pBoard)
 {
@@ -423,53 +418,28 @@ static bool board_index_traversable(tBoard *pBoard, tIndex Index, bool Player, u
         AND NOT BitTest64(Checked, Index);
 }
 
-/*
-static tSize board_index_longest_path(tBoard *pBoard, tIndex Index, uint64_t Checked)
-{
-    tSize MaxPathLen = 0;
-    uint64_t AdjacentIndices = ADJACENT_INDICES(Index);
-
-    BitSet64(&Checked, Index);
-
-    while (NOT BitEmpty64(AdjacentIndices))
-    {
-        tIndex AdjIndex = BitTzCount64(AdjacentIndices);
-    
-        if (board_index_traversable(pBoard, AdjIndex, board_index_player(pBoard, Index), Checked))
-        {
-            tSize PathLen = board_index_longest_path(pBoard, AdjIndex, Checked);
-            SET_IF_GREATER(PathLen, MaxPathLen);        
-        }
-
-        BitReset64(&AdjacentIndices, AdjIndex);
-    }
-
-    return MaxPathLen + 1;
-}
-*/
-
 static tSize board_index_longest_path(tBoard *pBoard, tIndex Index, uint64_t Checked)
 {
     tSize MaxPathLen = 0;
     bool Player = board_index_player(pBoard, Index);
     BitSet64(&Checked, Index);
 
-    if (board_traverse_left(pBoard, Index, Player, Checked))
+    if (LEFT_VALID(Index) AND board_index_traversable(pBoard, LEFT(Index), Player, Checked))
     {
         tSize PathLen = board_index_longest_path(pBoard, LEFT(Index), Checked);
         SET_IF_GREATER(PathLen, MaxPathLen);
     }
-    if (board_traverse_right(pBoard, Index, Player, Checked))
+    if (RIGHT_VALID(Index) AND board_index_traversable(pBoard, RIGHT(Index), Player, Checked))
     {
         tSize PathLen = board_index_longest_path(pBoard, RIGHT(Index), Checked);
         SET_IF_GREATER(PathLen, MaxPathLen);
     }
-    if (board_traverse_top(pBoard, Index, Player, Checked))
+    if (TOP_VALID(Index) AND board_index_traversable(pBoard, TOP(Index), Player, Checked))
     {
         tSize PathLen = board_index_longest_path(pBoard, TOP(Index), Checked);
         SET_IF_GREATER(PathLen, MaxPathLen);
     }
-    if (board_traverse_bottom(pBoard, Index, Player, Checked))
+    if (BOTTOM_VALID(Index) AND board_index_traversable(pBoard, BOTTOM(Index), Player, Checked))
     {
         tSize PathLen = board_index_longest_path(pBoard, BOTTOM(Index), Checked);
         SET_IF_GREATER(PathLen, MaxPathLen);
@@ -478,63 +448,35 @@ static tSize board_index_longest_path(tBoard *pBoard, tIndex Index, uint64_t Che
     return 1 + MaxPathLen;
 }
 
-/*
-static tSize board_index_checked_path(tBoard *pBoard, tIndex Index, uint64_t Checked, uint64_t *pPath)
-{
-    tSize MaxPathLen = 0;
-    uint64_t MaxPath = 0ULL, ThisPath = 0ULL, AdjacentIndices = ADJACENT_INDICES(Index);
-
-    BitSet64(&ThisPath, Index);
-
-    Checked |= MaxPath = ThisPath;
-
-    while (NOT BitEmpty64(AdjacentIndices))
-    {
-        tIndex AdjIndex = BitTzCount64(AdjacentIndices);
-    
-        if (board_index_traversable(pBoard, AdjIndex, board_index_player(pBoard, Index), Checked))
-        {
-            uint64_t Path = ThisPath;
-            tSize PathLen = board_index_checked_path(pBoard, AdjIndex, Checked, &Path);
-            SET_IF_GREATER_W_EXTRA(PathLen, MaxPathLen, Path, MaxPath);         
-        }
-
-        BitReset64(&AdjacentIndices, AdjIndex);
-    }
-    
-    *pPath |= MaxPath;
-
-    return MaxPathLen + 1;
-}
-*/
-
 static tSize board_index_checked_path(tBoard *pBoard, tIndex Index, uint64_t Checked, uint64_t *pPath)
 {
     tSize MaxPathLen = 0;
     uint64_t MaxPath, ThisPath = 0ULL;
     bool Player = board_index_player(pBoard, Index);
+
     BitSet64(&ThisPath, Index);
+
     Checked |= MaxPath = ThisPath;
 
-    if (board_traverse_left(pBoard, Index, Player, Checked))
+    if (LEFT_VALID(Index) AND board_index_traversable(pBoard, LEFT(Index), Player, Checked))
     {
         uint64_t Path = ThisPath;
         tSize PathLen = board_index_checked_path(pBoard, LEFT(Index), Checked, &Path);
         SET_IF_GREATER_W_EXTRA(PathLen, MaxPathLen, Path, MaxPath);
     }
-    if (board_traverse_right(pBoard, Index, Player, Checked))
+    if (RIGHT_VALID(Index) AND board_index_traversable(pBoard, RIGHT(Index), Player, Checked))
     {
         uint64_t Path = ThisPath;
         tSize PathLen = board_index_checked_path(pBoard, RIGHT(Index), Checked, &Path);
         SET_IF_GREATER_W_EXTRA(PathLen, MaxPathLen, Path, MaxPath);
     }
-    if (board_traverse_top(pBoard, Index, Player, Checked))
+    if (TOP_VALID(Index) AND board_index_traversable(pBoard, TOP(Index), Player, Checked))
     {
         uint64_t Path = ThisPath;
         tSize PathLen = board_index_checked_path(pBoard, TOP(Index), Checked, &Path);
         SET_IF_GREATER_W_EXTRA(PathLen, MaxPathLen, Path, MaxPath);
     }
-    if (board_traverse_bottom(pBoard, Index, Player, Checked))
+    if (BOTTOM_VALID(Index) AND board_index_traversable(pBoard, BOTTOM(Index), Player, Checked))
     {
         uint64_t Path = ThisPath;
         tSize PathLen = board_index_checked_path(pBoard, BOTTOM(Index), Checked, &Path);
@@ -563,32 +505,4 @@ static tSize board_index_adjacent_count(uint64_t Data, tIndex Index)
     }
 
     return AdjacentCount;
-}
-
-static bool board_traverse_left(tBoard *pBoard, tIndex Index, bool Player, uint64_t Checked)
-{
-    return LEFT_VALID(Index) AND NOT board_index_empty(pBoard, LEFT(Index)) 
-        AND board_index_player(pBoard, LEFT(Index)) == Player 
-        AND NOT BitTest64(Checked, LEFT(Index));
-}
-
-static bool board_traverse_right(tBoard *pBoard, tIndex Index, bool Player, uint64_t Checked)
-{
-    return RIGHT_VALID(Index) AND NOT board_index_empty(pBoard, RIGHT(Index)) 
-        AND board_index_player(pBoard, RIGHT(Index)) == Player 
-        AND NOT BitTest64(Checked, RIGHT(Index));
-}
-
-static bool board_traverse_top(tBoard *pBoard, tIndex Index, bool Player, uint64_t Checked)
-{
-    return TOP_VALID(Index) AND NOT board_index_empty(pBoard, TOP(Index)) 
-        AND board_index_player(pBoard, TOP(Index)) == Player  
-        AND NOT BitTest64(Checked, TOP(Index));
-}
-
-static bool board_traverse_bottom(tBoard *pBoard, tIndex Index, bool Player, uint64_t Checked)
-{
-    return BOTTOM_VALID(Index) AND NOT board_index_empty(pBoard, BOTTOM(Index)) 
-        AND board_index_player(pBoard, BOTTOM(Index)) == Player 
-        AND NOT BitTest64(Checked, BOTTOM(Index));
 }
