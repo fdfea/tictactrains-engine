@@ -18,6 +18,7 @@
 #include "util.h"
 #include "vector.h"
 
+static int ttt_get_player_move(tTTT *pGame, bool ComputerPlaying);
 static int ttt_load_moves(tTTT *pGame, tVector *pMoves);
 
 int main(void)
@@ -67,13 +68,14 @@ int main(void)
 
         if (Res < 0)
         {
+            dbg_printf(DEBUG_LEVEL_ERROR, "Failed to get move");
             goto FreeGame;
         }
 
         Index = Res;
 
 #ifdef STATS
-        if (ComputerPlaying && Game.Mcts.pRoot->Visits > 0)
+        if (Config.ComputerPlaying AND Game.Mcts.pRoot->Visits > 0)
         {
             pMctsStr = mctn_string(Game.Mcts.pRoot);
             printf("BEFORE SHIFT\n%s\n", pMctsStr);
@@ -87,7 +89,7 @@ int main(void)
         ttt_give_move(&Game, Index);
 
 #ifdef STATS
-        if (ComputerPlaying && Game.Mcts.pRoot->Visits > 0)
+        if (Config.ComputerPlaying AND Game.Mcts.pRoot->Visits > 0)
         {
             pMctsStr = mctn_string(Game.Mcts.pRoot);
             printf("AFTER SHIFT\n%s\n", pMctsStr);
@@ -152,50 +154,17 @@ void ttt_free(tTTT *pGame)
     mcts_free(&pGame->Mcts);
 }
 
-int ttt_get_player_move(tTTT *pGame, bool ComputerPlaying)
-{
-    int Index;
-    bool Player = ttt_get_player(pGame);
-    uint64_t Indices = rules_indices(&pGame->Rules, &pGame->Board, true);
-
-    char (*pId)[BOARD_ID_STR_LEN] = emalloc(BOARD_ID_STR_LEN * sizeof(char));
-
-    while (true)
-    {
-        if (ComputerPlaying)
-        {
-            printf("Enter move: ");
-        }
-        else
-        {
-            printf("Enter move (Player %d): ", (Player ? 1 : 2));
-        }
-
-        if (fgets(*pId, BOARD_ID_STR_LEN, stdin) ISNOT NULL)
-        {
-            int c; 
-            while ((c = getchar()) != '\n' AND c != EOF);
-
-            if (board_id_valid(pId)) 
-            {
-                Index = board_id_index(pId);
-
-                if (BitTest64(Indices, Index))
-                {
-                    break;
-                }
-            }
-        }
-    }
-
-    free(pId);
-
-    return Index;
-}
-
 int ttt_get_ai_move(tTTT *pGame)
 {
     int Res, Index;
+
+    if (ttt_finished(pGame))
+    {
+        Res = -EINVAL;
+        dbg_printf(DEBUG_LEVEL_WARN, "Cannot get AI move from finished game");
+        goto Error;
+    }
+
     uint64_t Indices = rules_indices(&pGame->Rules, &pGame->Board, false);
 
     if (BitTest64(Indices, 24)) 
@@ -224,20 +193,27 @@ Error:
 int ttt_give_move(tTTT *pGame, int Index)
 {
     int Res = 0;
+
+    if (ttt_finished(pGame))
+    {
+        Res = -EINVAL;
+        dbg_printf(DEBUG_LEVEL_WARN, "Cannot give move to finished game");
+        goto Error;
+    }
+
     uint64_t Indices = rules_indices(&pGame->Rules, &pGame->Board, false);
 
-    if (NOT board_index_valid(Index) 
-        OR NOT BitTest64(Indices, Index))
+    if (NOT board_index_valid(Index) OR NOT BitTest64(Indices, Index))
     {
         Res = -EINVAL;
         dbg_printf(DEBUG_LEVEL_ERROR, "Cannot make move at invalid index");
         goto Error;
     }
 
+    pGame->Moves[board_move(&pGame->Board)] = Index;
+
     board_advance(&pGame->Board, Index, rules_player(&pGame->Rules, &pGame->Board));
     mcts_give_state(&pGame->Mcts, &pGame->Board);
-
-    pGame->Moves[board_move(&pGame->Board)] = Index;
 
 Error:
     return Res;
@@ -248,7 +224,7 @@ bool ttt_get_player(tTTT *pGame)
     return rules_player(&pGame->Rules, &pGame->Board);
 }
 
-bool ttt_is_finished(tTTT *pGame)
+bool ttt_finished(tTTT *pGame)
 {
     return board_finished(&pGame->Board);
 }
@@ -270,6 +246,46 @@ int *ttt_get_moves(tTTT *pGame, int *pSize)
     }
 
     return pMoves;
+}
+
+static int ttt_get_player_move(tTTT *pGame, bool ComputerPlaying)
+{
+    int Index;
+    bool Player = ttt_get_player(pGame);
+    uint64_t Indices = rules_indices(&pGame->Rules, &pGame->Board, false);
+    char (*pId)[BOARD_ID_STR_LEN] = emalloc(BOARD_ID_STR_LEN * sizeof(char));
+
+    while (true)
+    {
+        if (ComputerPlaying)
+        {
+            printf("Enter move: ");
+        }
+        else
+        {
+            printf("Enter move (Player %d): ", (Player ? 1 : 2));
+        }
+
+        if (fgets(*pId, BOARD_ID_STR_LEN, stdin) ISNOT NULL)
+        {
+            int c; 
+            while ((c = getchar()) != '\n' AND c != EOF);
+
+            if (board_id_valid(pId))
+            {
+                Index = board_id_index(pId);
+
+                if (BitTest64(Indices, Index))
+                {
+                    break;
+                }
+            }
+        }
+    }
+
+    free(pId);
+
+    return Index;
 }
 
 static int ttt_load_moves(tTTT *pGame, tVector *pMoves)

@@ -98,17 +98,16 @@ char *rules_moves_string(tRules *pRules, int *pMoves, int Size)
         if (rules_index_player(pRules, i) AND NOT StartedMove)
         {
             char *MoveFmt = IF (Move < 10) THEN " %d. %s " ELSE "%d. %s ";
+            
             Str += sprintf(Str, MoveFmt, Move, pId);
             Move++;
             StartedMove = true;
         }
         else
         {
-            if (NOT rules_index_player(pRules, i) AND (i+1 < Size) 
-                AND rules_index_player(pRules, i+1)) 
+            if (NOT rules_index_player(pRules, i) AND (i+1 < Size) AND rules_index_player(pRules, i+1)) 
             {
                 Str += sprintf(Str, "%s  ", pId); 
-
                 StartedMove = false;
 
                 if ((Move-1) % 3 == 0)

@@ -8,8 +8,9 @@
 #include "types.h"
 #include "util.h"
 
-void mctnlist_init(tMctnList *pList, tBoard *pStates, tSize Size)
+void mctnlist_init(tMctnList *pList)
 {
+    pList->pItems = NULL;
     pList->Size = 0;
 }
 

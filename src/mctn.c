@@ -64,12 +64,14 @@ tMctn *mctn_random_child(tMctn *pNode, tRandom *pRandom)
 tMctn *mctn_most_visited_child(tMctn *pNode)
 {
     tMctn *pChild, *pWinner = NULL;
-    tVisits MaxVisits = 0;
+    tVisits Visits, MaxVisits = 0;
 
     for (tIndex i = 0; i < mctnlist_size(&pNode->Children); ++i)
     {
         pChild = mctnlist_get(&pNode->Children, i);
-        SET_IF_GREATER_EQ_W_EXTRA(pChild->Visits, MaxVisits, pChild, pWinner);
+        Visits = pChild->Visits;
+
+        SET_IF_GREATER_EQ_W_EXTRA(Visits, MaxVisits, pChild, pWinner);
     }
 
     return pWinner;
@@ -78,12 +80,14 @@ tMctn *mctn_most_visited_child(tMctn *pNode)
 tMctn *mctn_best_child_uct(tMctn *pNode)
 {
     tMctn *pChild, *pWinner = NULL;
-    float MaxUct = -FLT_MAX;
+    float Uct, MaxUct = -FLT_MAX;
 
     for (tIndex i = 0; i < mctnlist_size(&pNode->Children); ++i)
     {
         pChild = mctnlist_get(&pNode->Children, i);
-        SET_IF_GREATER_EQ_W_EXTRA(uct(pNode->Visits, pChild->Visits, pChild->Score), MaxUct, pChild, pWinner);
+        Uct = uct(pNode->Visits, pChild->Visits, pChild->Score);
+
+        SET_IF_GREATER_EQ_W_EXTRA(Uct, MaxUct, pChild, pWinner);
     }
 
     return pWinner;
@@ -94,8 +98,7 @@ char *mctn_string(tMctn *pNode)
     char *Str = emalloc(MCTN_STR_LEN * sizeof(char)), *pBegin = Str, *pId = NULL;
     tVisits Visits = pNode->Visits;
 
-    Str += sprintf(Str, "Tree size: %d, Root score: %.2f/%d\n",
-        mctn_size(pNode), pNode->Score, Visits);
+    Str += sprintf(Str, "Tree size: %d, Root score: %.2f/%d\n", mctn_size(pNode), pNode->Score, Visits);
 
     for (tIndex i = 0; i < mctnlist_size(&pNode->Children); ++i)
     {
@@ -106,7 +109,7 @@ char *mctn_string(tMctn *pNode)
         
         Str += sprintf(Str, "%s: %0.2f @ %.2f/%d ** %d Nodes ** %3.3e UCT\n", 
             pId, Eval, pChild->Score, pChild->Visits, mctn_size(pChild), 
-            UCT(Visits, pChild->Visits, pChild->Score));
+            uct(Visits, pChild->Visits, pChild->Score));
 
         free(pId);
     }

@@ -11,7 +11,7 @@
 #define MCTN_STR_LEN    2048
 
 #ifdef VISITS32
-#define TVISITS_MAX     1E6
+#define TVISITS_MAX     1e6
 typedef uint32_t tVisits;
 #else
 #define TVISITS_MAX     UINT16_MAX

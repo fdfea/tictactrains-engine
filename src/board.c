@@ -66,18 +66,18 @@ static const uint64_t IndexLookup[ROWS*COLUMNS][2] = {
     { 0x0000820000000000ULL, 0x0000830000000000ULL },
 };
 
-#define ADJACENT_INDICES(i)   (IndexLookup[i][0])
-#define NEIGHBOR_INDICES(i)   (IndexLookup[i][1])
+#define ADJACENT_INDICES(i)     (IndexLookup[i][0])
+#define NEIGHBOR_INDICES(i)     (IndexLookup[i][1])
 
 static tScore board_optimal_score(tBoard *pBoard);
 static tScore board_quick_score(tBoard *pBoard);
 
-static tSize board_index_longest_path(tBoard *pBoard, tIndex Index, uint64_t Checked);
-static tSize board_index_checked_path(tBoard *pBoard, tIndex Index, uint64_t Checked, uint64_t *pPath);
-
 static bool board_index_empty(tBoard *pBoard, tIndex Index);
 static bool board_index_player(tBoard *pBoard, tIndex Index);
 static bool board_index_traversable(tBoard *pBoard, tIndex Index, bool Player, uint64_t Checked);
+
+static tSize board_index_longest_path(tBoard *pBoard, tIndex Index, uint64_t Checked);
+static tSize board_index_checked_path(tBoard *pBoard, tIndex Index, uint64_t Checked, uint64_t *pPath);
 static tSize board_index_adjacent_count(uint64_t Checked, tIndex Index);
 
 void board_init(tBoard *pBoard)
@@ -309,6 +309,7 @@ char *board_string(tBoard *pBoard)
         }
 
         char *SqFmt = IF ((i+1) % COLUMNS == 0) THEN "[%c]\n" ELSE "[%c]";
+        
         Str += sprintf(Str, SqFmt, board_index_char(pBoard, i));
     }
 
@@ -320,6 +321,33 @@ char *board_string(tBoard *pBoard)
     }
 
     return pBegin;
+}
+
+static bool board_index_empty(tBoard *pBoard, tIndex Index)
+{
+    if (NOT board_index_valid(Index))
+    {
+        dbg_printf(DEBUG_LEVEL_WARN, "Cannot check if board index out of bounds is empty");
+    }
+
+    return BitTest64(pBoard->Empty, Index);
+}
+
+static bool board_index_player(tBoard *pBoard, tIndex Index)
+{
+    if (board_index_empty(pBoard, Index))
+    {
+        dbg_printf(DEBUG_LEVEL_WARN, "Cannot get player from empty board index");
+    }
+
+    return BitTest64(pBoard->Data, Index);
+}
+
+static bool board_index_traversable(tBoard *pBoard, tIndex Index, bool Player, uint64_t Checked)
+{
+    return NOT board_index_empty(pBoard, Index) 
+        AND board_index_player(pBoard, Index) == Player 
+        AND NOT BitTest64(Checked, Index);
 }
 
 static tSize board_index_longest_path(tBoard *pBoard, tIndex Index, uint64_t Checked)
@@ -371,33 +399,6 @@ static tSize board_index_checked_path(tBoard *pBoard, tIndex Index, uint64_t Che
     *pPath |= MaxPath;
 
     return MaxPathLen + 1;
-}
-
-static bool board_index_empty(tBoard *pBoard, tIndex Index)
-{
-    if (NOT board_index_valid(Index))
-    {
-        dbg_printf(DEBUG_LEVEL_WARN, "Cannot check if board index out of bounds is empty");
-    }
-
-    return BitTest64(pBoard->Empty, Index);
-}
-
-static bool board_index_player(tBoard *pBoard, tIndex Index)
-{
-    if (board_index_empty(pBoard, Index))
-    {
-        dbg_printf(DEBUG_LEVEL_WARN, "Cannot get player from empty board index");
-    }
-
-    return BitTest64(pBoard->Data, Index);
-}
-
-static bool board_index_traversable(tBoard *pBoard, tIndex Index, bool Player, uint64_t Checked)
-{
-    return NOT board_index_empty(pBoard, Index) 
-        AND board_index_player(pBoard, Index) == Player 
-        AND NOT BitTest64(Checked, Index);
 }
 
 static tSize board_index_adjacent_count(uint64_t Data, tIndex Index)
