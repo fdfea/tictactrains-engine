@@ -18,7 +18,7 @@ typedef uint32_t tVisits;
 typedef uint16_t tVisits;
 #endif
 
-typedef struct 
+typedef struct
 #ifdef PACKED
 __attribute__((packed))
 #endif

@@ -12,10 +12,11 @@
 #define BOARD_ID_STR_LEN    3
 #define BOARD_STR_LEN       190
 
-typedef struct Board
+typedef struct
 #ifdef PACKED
 __attribute__((packed))
 #endif
+Board
 {
     uint64_t Data;
     uint64_t Empty;

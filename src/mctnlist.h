@@ -9,10 +9,11 @@
 
 typedef struct Mctn tMctn;
 
-typedef struct MctnList
+typedef struct
 #ifdef PACKED
 __attribute__((packed))
 #endif
+MctnList
 {
     tMctn *pItems;
     tSize Size;
