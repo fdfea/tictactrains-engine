@@ -2,7 +2,6 @@
 #define __MCTS_H__
 
 #include <stdbool.h>
-#include <stdint.h>
 
 #include "board.h"
 #include "mctn.h"
@@ -13,6 +12,7 @@ typedef struct MctsConfig
 {
     tVisits Simulations;
     eScoringAlgorithm ScoringAlgorithm;
+    bool SearchOnlyNeighbors;
 }
 tMctsConfig;
 
@@ -20,13 +20,13 @@ typedef struct Mcts
 {
     tMctn *pRoot;
     tRules *pRules;
-    tRandom Rand;
+    tRandom Random;
     tMctsConfig Config;
     bool Player;
 } 
 tMcts;
 
-int mcts_init(tMcts *pMcts, tRules *pRules, tBoard *pState, tMctsConfig *pConfig);
+void mcts_init(tMcts *pMcts, tRules *pRules, tBoard *pState, tMctsConfig *pConfig);
 void mcts_config_init(tMctsConfig *pConfig);
 void mcts_free(tMcts *pMcts);
 void mcts_simulate(tMcts *pMcts);

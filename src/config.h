@@ -1,7 +1,8 @@
 #ifndef __CONFIG_H__
 #define __CONFIG_H__
 
-#include "board.h"
+#include <stdbool.h>
+
 #include "mcts.h"
 #include "rules.h"
 #include "vector.h"
@@ -12,11 +13,11 @@ typedef struct Config
     bool ComputerPlayer;
     tRulesConfig RulesConfig;
     tMctsConfig MctsConfig;
-    tVector StartPosition;
+    tVector StartingMoves;
 } 
 tConfig;
 
-void config_init(tConfig *pConfig);
+int config_init(tConfig *pConfig);
 void config_free(tConfig *pConfig);
 int config_load(tConfig *pConfig);
 

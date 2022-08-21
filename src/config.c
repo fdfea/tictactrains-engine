@@ -6,19 +6,22 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "board.h"
 #include "config.h"
 #include "debug.h"
+#include "rules.h"
 #include "types.h"
 #include "util.h"
 #include "vector.h"
 
-#define CONFIG_FILENAME             "ttt.conf"
-#define CONFIG_COMPUTER_PLAYING     "COMPUTER_PLAYING"
-#define CONFIG_COMPUTER_PLAYER      "COMPUTER_PLAYER"
-#define CONFIG_RULES_TYPE           "RULES_TYPE"
-#define CONFIG_SIMULATIONS          "SIMULATIONS"
-#define CONFIG_SCORING_ALGORITHM    "SCORING_ALGORITHM"
-#define CONFIG_START_POSITION       "STARTING_POSITION"
+#define CONFIG_FILENAME                 "ttt.conf"
+#define CONFIG_COMPUTER_PLAYING         "COMPUTER_PLAYING"
+#define CONFIG_COMPUTER_PLAYER          "COMPUTER_PLAYER"
+#define CONFIG_RULES_TYPE               "RULES_TYPE"
+#define CONFIG_SIMULATIONS              "SIMULATIONS"
+#define CONFIG_SCORING_ALGORITHM        "SCORING_ALGORITHM"
+#define CONFIG_SEARCH_ONLY_NEIGHBORS    "SEARCH_ONLY_NEIGHBORS"
+#define CONFIG_STARTING_MOVES           "STARTING_MOVES"
 
 #define CONFIG_MAXLINE              128
 #define CONFIG_MAX_MOVES_STR_LEN    (ROWS*COLUMNS*2)
@@ -27,23 +30,29 @@
 
 static int config_parse_moves(tVector *pMoves, char *pMovesStr);
 
-void config_init(tConfig *pConfig)
+int config_init(tConfig *pConfig)
 {
+    int Res = 0;
+
     pConfig->ComputerPlaying = false;
     pConfig->ComputerPlayer = false;
+
     rules_config_init(&pConfig->RulesConfig);
     mcts_config_init(&pConfig->MctsConfig);
-    vector_init(&pConfig->StartPosition);
+
+    Res = vector_init(&pConfig->StartingMoves);
+
+    return Res;
 }
 
 void config_free(tConfig *pConfig)
 {
-    for (tIndex i = 0; i < vector_size(&pConfig->StartPosition); ++i)
+    for (tIndex i = 0; i < vector_size(&pConfig->StartingMoves); ++i)
     {
-        tIndex *pIndex = (tIndex *) vector_get(&pConfig->StartPosition, i);
-        free(pIndex);
+        free(vector_get(&pConfig->StartingMoves, i));
     }
-    vector_free(&pConfig->StartPosition);
+
+    vector_free(&pConfig->StartingMoves);
 }
 
 int config_load(tConfig *pConfig)
@@ -55,10 +64,10 @@ int config_load(tConfig *pConfig)
     
     struct
     {
-        bool ComputerPlaying, ComputerPlayer, RulesType,
-             Simulations, ScoringAlgorithm, StartPosition;
+        bool ComputerPlaying, ComputerPlayer, RulesType, Simulations,
+            ScoringAlgorithm, SearchOnlyNeighbors, StartPosition;
     }
-    Found = {false, false, false, false, false, false};
+    Found = { false, false, false, false, false, false, false };
 
     if ((pFile = fopen(CONFIG_FILENAME, "r")) ISNOT NULL)
     {
@@ -85,14 +94,15 @@ int config_load(tConfig *pConfig)
                 goto Error;
             }
 
-            if (NOT Found.StartPosition AND CONFIG_STRNCMP(pKey, CONFIG_START_POSITION))
+            if (NOT Found.StartPosition AND CONFIG_STRNCMP(pKey, CONFIG_STARTING_MOVES))
             {
-                Res = config_parse_moves(&pConfig->StartPosition, pValue);
+                Res = config_parse_moves(&pConfig->StartingMoves, pValue);
                 if (Res < 0)
                 {
                     Res = -EINVAL;
                     goto Error;
                 }
+
                 Found.StartPosition = true;
                 continue;
             }
@@ -120,6 +130,7 @@ int config_load(tConfig *pConfig)
                     Res = -EINVAL;
                     goto Error;
                 }
+
                 Found.ComputerPlaying = true;
             }
             else if (NOT Found.ComputerPlayer AND CONFIG_STRNCMP(pKey, CONFIG_COMPUTER_PLAYER))
@@ -137,6 +148,7 @@ int config_load(tConfig *pConfig)
                     Res = -EINVAL;
                     goto Error;
                 }
+
                 Found.ComputerPlayer = true;
             }
             else if (NOT Found.RulesType AND CONFIG_STRNCMP(pKey, CONFIG_RULES_TYPE))
@@ -164,6 +176,7 @@ int config_load(tConfig *pConfig)
                         goto Error;
                     }
                 }
+
                 Found.RulesType = true;
             }
             else if (NOT Found.Simulations AND CONFIG_STRNCMP(pKey, CONFIG_SIMULATIONS))
@@ -177,6 +190,7 @@ int config_load(tConfig *pConfig)
                     Res = -EINVAL;
                     goto Error;
                 }
+
                 Found.Simulations = true;
             }
             else if (NOT Found.ScoringAlgorithm AND CONFIG_STRNCMP(pKey, CONFIG_SCORING_ALGORITHM))
@@ -199,7 +213,26 @@ int config_load(tConfig *pConfig)
                         goto Error;
                     }
                 }
+
                 Found.ScoringAlgorithm = true;
+            }
+            else if (NOT Found.SearchOnlyNeighbors AND CONFIG_STRNCMP(pKey, CONFIG_SEARCH_ONLY_NEIGHBORS))
+            {
+                if (Val == 0)
+                {
+                    pConfig->MctsConfig.SearchOnlyNeighbors = false;
+                }
+                else if (Val == 1)
+                {
+                    pConfig->MctsConfig.SearchOnlyNeighbors = true;
+                }
+                else
+                {
+                    Res = -EINVAL;
+                    goto Error;
+                }
+
+                Found.SearchOnlyNeighbors = true;
             }
             else
             {
@@ -215,16 +248,17 @@ int config_load(tConfig *pConfig)
         goto NoFile;
     }
 
-    dbg_printf(DEBUG_LEVEL_INFO, "%s: %d\n", CONFIG_COMPUTER_PLAYING, pConfig->ComputerPlaying);
-    dbg_printf(DEBUG_LEVEL_INFO, "%s: %d\n", CONFIG_COMPUTER_PLAYER, pConfig->ComputerPlayer);
-    dbg_printf(DEBUG_LEVEL_INFO, "%s: %d\n", CONFIG_RULES_TYPE, pConfig->RulesConfig.RulesType);
-    dbg_printf(DEBUG_LEVEL_INFO, "%s: %d\n", CONFIG_SIMULATIONS, pConfig->MctsConfig.Simulations);
-    dbg_printf(DEBUG_LEVEL_INFO, "%s: %d\n", CONFIG_SCORING_ALGORITHM, pConfig->MctsConfig.ScoringAlgorithm);
+    dbg_printf(DEBUG_LEVEL_INFO, "%s: %d", CONFIG_COMPUTER_PLAYING, pConfig->ComputerPlaying);
+    dbg_printf(DEBUG_LEVEL_INFO, "%s: %d", CONFIG_COMPUTER_PLAYER, pConfig->ComputerPlayer);
+    dbg_printf(DEBUG_LEVEL_INFO, "%s: %d", CONFIG_RULES_TYPE, pConfig->RulesConfig.RulesType);
+    dbg_printf(DEBUG_LEVEL_INFO, "%s: %d", CONFIG_SIMULATIONS, pConfig->MctsConfig.Simulations);
+    dbg_printf(DEBUG_LEVEL_INFO, "%s: %d", CONFIG_SCORING_ALGORITHM, pConfig->MctsConfig.ScoringAlgorithm);
+    dbg_printf(DEBUG_LEVEL_INFO, "%s: %d", CONFIG_SEARCH_ONLY_NEIGHBORS, pConfig->MctsConfig.SearchOnlyNeighbors);
 
     goto Success;
 
 Error:
-    fprintf(stderr, "[ERROR] Malformatted configuration at line %d\n", Line);
+    fprintf(stderr, "[ERROR] Cannot parse configuration at line %d\n", Line);
 
 Success:
     fclose(pFile);
@@ -273,19 +307,14 @@ static int config_parse_moves(tVector *pMoves, char *pMovesStr)
             goto Error;
         }
 
-        pMoveIndex = malloc(sizeof(tIndex));
-        if (pMoveIndex IS NULL)
-        {
-            Res = -ENOMEM;
-            goto Error;
-        }
-
+        pMoveIndex = emalloc(sizeof(tIndex));
         *pMoveIndex = MoveIndex;
+
         vector_add(pMoves, pMoveIndex);
         
         Index += 2;
     }
 
-    Error:
-        return Res;
+Error:
+    return Res;
 }

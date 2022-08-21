@@ -5,60 +5,69 @@
 #include "random.h"
 #include "types.h"
 
-bool BitTest64(uint64_t Mask, tIndex Index)
+bool BitEmpty64(uint64_t Bits)
 {
-    return (Mask & 1ULL << Index) != 0ULL;
+    return Bits == 0ULL;
 }
 
-void BitSet64(uint64_t *pMask, tIndex Index)
+bool BitTest64(uint64_t Bits, tIndex Index)
 {
-    *pMask |= (1ULL << Index);
+    return (Bits & 1ULL << Index) != 0ULL;
 }
 
-void BitReset64(uint64_t *pMask, tIndex Index)
+void BitSet64(uint64_t *pBits, tIndex Index)
 {
-    *pMask &= ~(1ULL << Index);
+    *pBits |= (1ULL << Index);
 }
 
-tSize BitPopCount64(uint64_t Mask)
+void BitReset64(uint64_t *pBits, tIndex Index)
 {
-    return __builtin_popcountll(Mask);
+    *pBits &= ~(1ULL << Index);
 }
 
-tIndex BitLzCount64(uint64_t Mask)
+tSize BitPopCount64(uint64_t Bits)
 {
-    return __builtin_ctzll(Mask);
+    return __builtin_popcountll(Bits);
 }
 
-tIndex BitKthSetIndex64(uint64_t Mask, uint64_t Rank)
+tSize BitLzCount64(uint64_t Bits)
+{
+    return __builtin_clzll(Bits);
+}
+
+tSize BitTzCount64(uint64_t Bits)
+{
+    return __builtin_ctzll(Bits);
+}
+
+tIndex BitKthSetIndex64(uint64_t Bits, uint64_t K)
 {
     uint64_t S = 64ULL, A, B, C, D, E;
-    A =  Mask - ((Mask >> 1) & ~0ULL/3);
+    A =  Bits - ((Bits >> 1) & ~0ULL/3);
     B = (A & ~0ULL/5) + ((A >> 2) & ~0ULL/5);
     C = (B + (B >> 4)) & ~0ULL/0x11;
     D = (C + (C >> 8)) & ~0ULL/0x101;
     E = (D >> 32) + (D >> 48);
-    S -= ((E - Rank) & 256) >> 3; 
-    Rank -= (E & ((E - Rank) >> 8));
+    S -= ((E - K) & 256) >> 3; 
+    K -= (E & ((E - K) >> 8));
     E = (D >> (S - 16)) & 0xFF;
-    S -= ((E - Rank) & 256) >> 4; 
-    Rank -= (E & ((E - Rank) >> 8));
+    S -= ((E - K) & 256) >> 4; 
+    K -= (E & ((E - K) >> 8));
     E = (C >> (S - 8)) & 0xF;
-    S -= ((E - Rank) & 256) >> 5; 
-    Rank -= (E & ((E - Rank) >> 8));
+    S -= ((E - K) & 256) >> 5; 
+    K -= (E & ((E - K) >> 8));
     E = (B >> (S - 4)) & 0x7;
-    S -= ((E - Rank) & 256) >> 6; 
-    Rank -= (E & ((E - Rank) >> 8));
+    S -= ((E - K) & 256) >> 6; 
+    K -= (E & ((E - K) >> 8));
     E = (A >> (S - 2)) & 0x3;
-    S -= ((E - Rank) & 256) >> 7; 
-    Rank -= (E & ((E - Rank) >> 8));
-    E = (Mask >> (S - 1)) & 0x1;
-    S -= ((E - Rank) & 256) >> 8;
+    S -= ((E - K) & 256) >> 7; 
+    K -= (E & ((E - K) >> 8));
+    E = (Bits >> (S - 1)) & 0x1;
+    S -= ((E - K) & 256) >> 8;
     return S - 1;
 }
 
-tIndex BitScanRandom64(uint64_t Mask, tRandom *pRand)
+tIndex BitScanRandom64(uint64_t Bits, tRandom *pRandom)
 {
-    uint64_t Rank = (rand_next(pRand) % BitPopCount64(Mask)) + 1;
-    return BitKthSetIndex64(Mask, Rank);
+    return BitKthSetIndex64(Bits, random_next(pRandom) % BitPopCount64(Bits) + 1);
 }

@@ -5,9 +5,10 @@
 #include <stdint.h>
 
 #include "board.h"
+#include "types.h"
 #include "vector.h"
 
-#define RULES_MOVES_STR_LEN 512
+#define RULES_MOVES_STR_LEN     512
 
 typedef enum RulesType
 {
@@ -17,7 +18,13 @@ typedef enum RulesType
 } 
 eRulesType;
 
-typedef enum __attribute__ ((aligned(8))) MovePolicy
+typedef struct RulesConfig
+{
+    eRulesType RulesType;
+}
+tRulesConfig;
+
+typedef enum __attribute__((aligned(8))) MovePolicy
 {
     X_ALL       = 0x8001FFFFFFFFFFFFULL, 
     X_RING1     = 0x8001FFFFFEFFFFFFULL, 
@@ -48,19 +55,13 @@ typedef struct Rules
 }
 tRules;
 
-typedef struct RulesConfig
-{
-    eRulesType RulesType;
-}
-tRulesConfig;
-
 void rules_init(tRules *pRules, tRulesConfig *pConfig);
 void rules_config_init(tRulesConfig *pConfig);
-uint64_t rules_policy(tRules *pRules, tBoard *pBoard);
+uint64_t rules_indices(tRules *pRules, tBoard *pBoard, bool OnlyAdjacent);
 bool rules_player(tRules *pRules, tBoard *pBoard);
 bool rules_prev_player(tRules *pRules, tBoard *pState);
-void rules_simulate_playout(tRules *pRules, tBoard *pBoard, tRandom *pRand);
-void rules_next_states(tRules *pRules, tBoard *pBoard, tVector *pVector);
+void rules_simulate_playout(tRules *pRules, tBoard *pBoard, tRandom *pRandom, bool OnlyNeighbors);
+tBoard *rules_next_states(tRules *pRules, tBoard *pBoard, tSize *pSize, bool OnlyNeighbors);
 char *rules_moves_string(tRules *pRules, int *pMoves, int Size);
 
 static const eMovePolicy RulesClassical[ROWS*COLUMNS] = 
@@ -87,7 +88,7 @@ static const eMovePolicy RulesModern[ROWS*COLUMNS] =
 
 static const eMovePolicy RulesExperimental[ROWS*COLUMNS] = 
 {
-    X_ALL, O_RING2, O_RING3, X_ALL, O_ALL, X_ALL, O_ALL,
+    X_ALL, O_RING2_U, O_RING3, X_ALL, O_ALL, X_ALL, O_ALL,
     X_ALL, O_ALL, X_ALL, O_ALL, X_ALL, O_ALL, X_ALL,
     O_ALL, X_ALL, O_ALL, X_ALL, O_ALL, X_ALL, O_ALL,
     X_ALL, O_ALL, X_ALL, O_ALL, X_ALL, O_ALL, X_ALL,

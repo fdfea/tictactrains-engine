@@ -9,7 +9,7 @@ typedef struct Random
 } 
 tRandom;
 
-void rand_init(tRandom *pRand);
-uint64_t rand_next(tRandom *pRand);
+void random_init(tRandom *pRandom);
+uint64_t random_next(tRandom *pRandom);
 
 #endif

@@ -2,7 +2,7 @@
 #define __UTIL_H__
 
 #include <stdbool.h>
-#include <stdlib.h>
+#include <stddef.h>
 
 #define NOT     !
 #define AND     &&
@@ -32,5 +32,8 @@
     do {                                                        \
         if (Val >= MaxVal) { MaxVal = Val; MaxExtra = Extra; }  \
     } while (false)
+
+void *emalloc(size_t Size);
+void *erealloc(void *pMemory, size_t Size);
 
 #endif
