@@ -12,6 +12,8 @@
 #define BOARD_ID_STR_LEN    3
 #define BOARD_STR_LEN       190
 
+#define BOARD_MASK  0x0001FFFFFFFFFFFFULL
+
 typedef struct
 #ifdef PACKED
 __attribute__((packed))
@@ -46,5 +48,7 @@ tIndex board_id_index(char (*pId)[BOARD_ID_STR_LEN]);
 char *board_index_id(tIndex Index);
 bool board_id_valid(char (*pId)[BOARD_ID_STR_LEN]);
 bool board_index_valid(tIndex Index);
+bool board_index_empty(tBoard *pBoard, tIndex Index);
+bool board_index_player(tBoard *pBoard, tIndex Index);
 
 #endif

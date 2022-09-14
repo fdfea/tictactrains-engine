@@ -4,6 +4,7 @@
 #include "bitutil.h"
 #include "random.h"
 #include "types.h"
+#include "util.h"
 
 bool BitEmpty64(uint64_t Bits)
 {
@@ -12,7 +13,7 @@ bool BitEmpty64(uint64_t Bits)
 
 bool BitTest64(uint64_t Bits, tIndex Index)
 {
-    return (Bits & 1ULL << Index) != 0ULL;
+    return NOT BitEmpty64(Bits & (1ULL << Index));
 }
 
 void BitSet64(uint64_t *pBits, tIndex Index)

@@ -9,8 +9,6 @@
 #include "types.h"
 #include "util.h"
 
-#define BOARD_MASK  0x0001FFFFFFFFFFFFULL
-
 #define BOARD_LAST_MOVE_INDEX       56
 #define BOARD_MIN_NEIGHBOR_INDICES  6
 
@@ -140,8 +138,6 @@ static const uint64_t IndicesLookup[ROWS*COLUMNS][2] = {
 static tScore board_optimal_score(tBoard *pBoard);
 static tScore board_quick_score(tBoard *pBoard);
 
-static bool board_index_empty(tBoard *pBoard, tIndex Index);
-static bool board_index_player(tBoard *pBoard, tIndex Index);
 static bool board_index_traversable(tBoard *pBoard, tIndex Index, bool Player, uint64_t Checked);
 
 static tSize board_index_longest_path(tBoard *pBoard, tIndex Index, uint64_t Checked);
@@ -270,17 +266,21 @@ static tScore board_optimal_score(tBoard *pBoard)
         tIndex Index = BitTzCount64(NotEmpty);
         tSize Score = board_index_longest_path(pBoard, Index, 0ULL);
 
-        if (board_index_player(pBoard, Index)) 
+        if (board_index_player(pBoard, Index))
         {
+            //printf("board_optimal_score -- index: %d, player: X, score: %d\n", Index, Score);
             SET_IF_GREATER(Score, ScoreX);
         }
         else
         {
+            //printf("board_optimal_score -- index: %d, player: O, score: %d\n", Index, Score);
             SET_IF_GREATER(Score, ScoreO);
         }
 
         BitReset64(&NotEmpty, Index);
     }
+
+    printf("board_optimal_score -- max score x: %d, max score o: %d\n", ScoreX, ScoreO);
 
     return ScoreX - ScoreO;
 }
@@ -391,7 +391,7 @@ char *board_string(tBoard *pBoard)
     return pBegin;
 }
 
-static bool board_index_empty(tBoard *pBoard, tIndex Index)
+bool board_index_empty(tBoard *pBoard, tIndex Index)
 {
     if (NOT board_index_valid(Index))
     {
@@ -401,7 +401,7 @@ static bool board_index_empty(tBoard *pBoard, tIndex Index)
     return BitTest64(pBoard->Empty, Index);
 }
 
-static bool board_index_player(tBoard *pBoard, tIndex Index)
+bool board_index_player(tBoard *pBoard, tIndex Index)
 {
     if (board_index_empty(pBoard, Index))
     {
