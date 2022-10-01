@@ -280,7 +280,7 @@ static tScore board_optimal_score(tBoard *pBoard)
         BitReset64(&NotEmpty, Index);
     }
 
-    printf("board_optimal_score -- max score x: %d, max score o: %d\n", ScoreX, ScoreO);
+    //printf("board_optimal_score -- max score x: %d, max score o: %d\n", ScoreX, ScoreO);
 
     return ScoreX - ScoreO;
 }

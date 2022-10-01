@@ -13,6 +13,7 @@ int main(void)
     tRulesConfig RulesConfig;
     tRules Rules;
     tRandom Random;
+    tBoard Board;
 
     rules_config_init(&RulesConfig);
 
@@ -23,12 +24,11 @@ int main(void)
 
     //rules_simulate_playout(&Rules, &Board, &Random, true);
 
-    board_compare_score(0x0000A487142BE5FDULL);
-    board_compare_score(0x0000C37009D7C7EAULL);
-    board_compare_score(0x00004DEA8BCBC782ULL);
+    //board_compare_score(0x0000A487142BE5FDULL);
+    //board_compare_score(0x0000C37009D7C7EAULL);
+    //board_compare_score(0x00004DEA8BCBC782ULL);
 
-    /*
-    int Simulations = 100000;
+    int Simulations = 10000;
     int Failures = 0;
 
     for (int i = 0; i < Simulations; ++i)
@@ -55,7 +55,6 @@ int main(void)
     }
 
     printf("simulations: %d, failures: %d\n", Simulations, Failures);
-    */
 
     return 0;
 }

@@ -30,6 +30,7 @@ bool vector_merge(tVector *pVector, tVector *pV);
 void *vector_get(tVector *pVector, tIndex Index);
 void *vector_set(tVector *pVector, tIndex Index, void *pItem);
 void *vector_take(tVector *pVector, tIndex Index);
+void *vector_pop(tVector *pVector);
 void vector_shuffle(tVector *pVector, tRandom *pRand);
 
 #endif

@@ -15,7 +15,7 @@
 
 typedef struct Area3x4PathLookup
 {
-    uint16_t LongestPath, LeastExitPath, ShortestPath;
+    uint16_t LongestPath/*, LeastExitPath, ShortestPath*/;
 }
 tArea3x4PathLookup;
 

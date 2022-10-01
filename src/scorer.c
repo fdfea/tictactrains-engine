@@ -134,7 +134,7 @@ tScore score(tBoard *pBoard)
         }
     }
 
-    printf("board_lookup_score -- max score x: %d, max score o: %d\n", ScoreX, ScoreO);
+    //printf("board_lookup_score -- max score x: %d, max score o: %d\n", ScoreX, ScoreO);
 
     return ScoreX - ScoreO;
 }
@@ -160,8 +160,8 @@ static tSize area_3x4_lookup_longest_path(tIndex Index, uint64_t Data)
         if (BitTest64(Data, NextIndex))
         {
             tSize LongestPathLength = BitPopCount64(pAreaPathLookup->LongestPath & AREA_3X4_MASK);
-            tSize LeastExitPathLength = BitPopCount64(pAreaPathLookup->LeastExitPath & AREA_3X4_MASK);
-            tSize ShortestPathLength = BitPopCount64(pAreaPathLookup->ShortestPath & AREA_3X4_MASK);
+            //tSize LeastExitPathLength = BitPopCount64(pAreaPathLookup->LeastExitPath & AREA_3X4_MASK);
+            //tSize ShortestPathLength = BitPopCount64(pAreaPathLookup->ShortestPath & AREA_3X4_MASK);
 
             if (LongestPathLength > 0)
             {
@@ -172,6 +172,7 @@ static tSize area_3x4_lookup_longest_path(tIndex Index, uint64_t Data)
                 SET_IF_GREATER(PathLength, MaxPathLength);
             }
 
+            /*
             if (LeastExitPathLength > 0)
             {
                 uint64_t LeastExitPathConverted = (*convert_q[Index])(pAreaPathLookup->LeastExitPath);
@@ -180,7 +181,9 @@ static tSize area_3x4_lookup_longest_path(tIndex Index, uint64_t Data)
                 tSize PathLength = LeastExitPathLength + board_lookup_longest_path(NextIndex, NextData);
                 SET_IF_GREATER(PathLength, MaxPathLength);
             }
+            */
 
+            /*
             if (ShortestPathLength > 0)
             {
                 uint64_t ShortestPathConverted = (*convert_q[Index])(pAreaPathLookup->ShortestPath);
@@ -189,6 +192,7 @@ static tSize area_3x4_lookup_longest_path(tIndex Index, uint64_t Data)
                 tSize PathLength = ShortestPathLength + board_lookup_longest_path(NextIndex, NextData);
                 SET_IF_GREATER(PathLength, MaxPathLength);
             }
+            */
         }
     }
 
