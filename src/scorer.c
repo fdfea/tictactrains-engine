@@ -8,6 +8,8 @@
 #include "types.h"
 #include "util.h"
 
+#include <stdlib.h>
+
 #define AREA_1X1_EXITS      4
 #define AREA_1X1_INDICES    1
 #define AREA_1X1_MASK       0x0001U
@@ -34,7 +36,7 @@ static const tIndex board_area_index_c[ROWS*COLUMNS] = {
      0,  4,  8,  3,  2,  1,  0,
 };
 
-static tSize board_lookup_longest_path(tIndex Index, uint64_t Data);
+//static tSize board_lookup_longest_path(tIndex Index, uint64_t Data);
 static tSize area_3x4_lookup_longest_path(tIndex Index, uint64_t Data);
 static tSize area_1x1_lookup_longest_path(tIndex Index, uint64_t Data);
 
@@ -112,6 +114,20 @@ static const tSize (*area_lookup_longest_path[ROWS*COLUMNS])(tIndex, uint64_t) =
     area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path,
 };
 
+static const tIndex Area3x4ExitIndexLookup[AREA_3X4_EXITS] = { 3, 7, 11, 8, 9, 10, 11 };
+
+#define AREA_3X4_EXIT_INDEX(i)      Area3x4ExitIndexLookup[i]
+
+void scorer_init()
+{
+    scorer_area_3x4_lookup_init();
+}
+
+void scorer_free()
+{
+    scorer_area_3x4_lookup_free();
+}
+
 tScore score(tBoard *pBoard)
 {
     tScore ScoreX = 0, ScoreO = 0;
@@ -139,60 +155,67 @@ tScore score(tBoard *pBoard)
     return ScoreX - ScoreO;
 }
 
-static tSize board_lookup_longest_path(tIndex Index, uint64_t Data)
+tSize board_lookup_longest_path(tIndex Index, uint64_t Data)
 {
     return (*area_lookup_longest_path[Index])(Index, Data);
 }
 
 static tSize area_3x4_lookup_longest_path(tIndex Index, uint64_t Data)
 {
+    //printf("in area_3x4_lookup_longest_path\n");
+
     const tArea3x4Lookup *pAreaLookup = scorer_area_3x4_lookup((*extract_q[Index])(Data));
     const tArea3x4IndexLookup *pAreaIndexLookup = &pAreaLookup->IndexPaths[board_area_index_c[Index]];
     tSize MaxPathLength = 0;
+
+    tBoard Board;
+    Board.Data = Data;
+    Board.Empty = 0ULL;
+    //char *ppStr = board_string(&Board);
+    //printf("board:\n%s\n", ppStr);
+    //free(ppStr);
+    //printf("traversing index: %d\n", Index);
 
     for (tIndex i = 0; i < AREA_3X4_EXITS; ++i)
     {
         const tArea3x4PathLookup* pAreaPathLookup = &pAreaIndexLookup->ExitPaths[i];
         tIndex NextIndex = (*board_area_exit_index_q[Index])(i);
 
+        //printf("traversing path: %d -> %d, next index: %d\n", Index, i, NextIndex);
+
         SET_IF_GREATER(pAreaIndexLookup->LongestPath, MaxPathLength);
 
         if (BitTest64(Data, NextIndex))
         {
-            tSize LongestPathLength = BitPopCount64(pAreaPathLookup->LongestPath & AREA_3X4_MASK);
-            //tSize LeastExitPathLength = BitPopCount64(pAreaPathLookup->LeastExitPath & AREA_3X4_MASK);
-            //tSize ShortestPathLength = BitPopCount64(pAreaPathLookup->ShortestPath & AREA_3X4_MASK);
+            //printf("checking next index: %d, paths size: %d\n", NextIndex, pAreaPathLookup->Size);
 
-            if (LongestPathLength > 0)
+            for (tIndex j = 0; j < pAreaPathLookup->Size; ++j)
             {
-                uint64_t LongestPathConverted = (*convert_q[Index])(pAreaPathLookup->LongestPath);
-                uint64_t NextData = Data & ~LongestPathConverted;
-                //printf("area_3x4_lookup_longest_path -- index: %d, next index longest: %d\n", Index, NextIndex);
-                tSize PathLength = LongestPathLength + board_lookup_longest_path(NextIndex, NextData);
-                SET_IF_GREATER(PathLength, MaxPathLength);
-            }
+                uint16_t Path = pAreaPathLookup->Paths[j];
+                tSize PathLength = BitPopCount16(Path & AREA_3X4_MASK);
+                uint64_t PathConverted = (*convert_q[Index])(Path);
+                uint64_t NextData = Data & ~PathConverted & BOARD_MASK;
 
-            /*
-            if (LeastExitPathLength > 0)
-            {
-                uint64_t LeastExitPathConverted = (*convert_q[Index])(pAreaPathLookup->LeastExitPath);
-                uint64_t NextData = Data & ~LeastExitPathConverted;
-                //printf("area_3x4_lookup_longest_path -- index: %d, next index least exit: %d\n", Index, NextIndex);
-                tSize PathLength = LeastExitPathLength + board_lookup_longest_path(NextIndex, NextData);
-                SET_IF_GREATER(PathLength, MaxPathLength);
-            }
-            */
+                tBoard Converted;
+                Converted.Data = PathConverted;
+                Converted.Empty = 0ULL;
+                //char *Str = board_string(&Converted);
+                //printf("path converted:\n%s\n", Str);
+                //free(Str);
 
-            /*
-            if (ShortestPathLength > 0)
-            {
-                uint64_t ShortestPathConverted = (*convert_q[Index])(pAreaPathLookup->ShortestPath);
-                uint64_t NextData = Data & ~ShortestPathConverted;
-                //printf("area_3x4_lookup_longest_path -- index: %d, next index shortest: %d\n", Index, NextIndex);
-                tSize PathLength = ShortestPathLength + board_lookup_longest_path(NextIndex, NextData);
-                SET_IF_GREATER(PathLength, MaxPathLength);
+                //printf("checking path:\n");
+                //area_3x4_print(Path);
+                tBoard Brd;
+                Brd.Data = NextData;
+                Brd.Empty = 0ULL;
+                //char *pStr = board_string(&Brd);
+                //printf("next data:\n%s\n", pStr);
+                //free(pStr);
+
+                tSize LookupLength = PathLength + board_lookup_longest_path(NextIndex, NextData);
+
+                SET_IF_GREATER(LookupLength, MaxPathLength);
             }
-            */
         }
     }
 
@@ -203,6 +226,8 @@ static tSize area_3x4_lookup_longest_path(tIndex Index, uint64_t Data)
 
 static tSize area_1x1_lookup_longest_path(tIndex Index, uint64_t Data)
 {
+    //printf("in area_1x1_lookup_longest_path\n");
+
     tSize MaxPathLength = 0;
 
     BitReset64(&Data, Index);
@@ -211,7 +236,7 @@ static tSize area_1x1_lookup_longest_path(tIndex Index, uint64_t Data)
     {
         tIndex ExitIndex = (*board_area_exit_index_q[Index])(i);
 
-        if(BitTest64(Data, ExitIndex))
+        if (BitTest64(Data, ExitIndex))
         {
             //printf("area_1x1_lookup_longest_path -- index: %d, next index: %d\n", Index, ExitIndex);
             tSize PathLength = board_lookup_longest_path(ExitIndex, Data);

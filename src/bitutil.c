@@ -6,6 +6,31 @@
 #include "types.h"
 #include "util.h"
 
+bool BitEmpty16(uint16_t Bits)
+{
+    return Bits == 0U;
+}
+
+bool BitTest16(uint16_t Bits, tIndex Index)
+{
+    return NOT BitEmpty16(Bits & (1U << Index));
+}
+
+void BitSet16(uint16_t *pBits, tIndex Index)
+{
+    *pBits |= (1U << Index);
+}
+
+void BitReset16(uint16_t *pBits, tIndex Index)
+{
+    *pBits &= ~(1U << Index);
+}
+
+tSize BitPopCount16(uint16_t Bits)
+{
+    return __builtin_popcount(Bits);
+}
+
 bool BitEmpty64(uint64_t Bits)
 {
     return Bits == 0ULL;

@@ -5,6 +5,7 @@
 #include "random.h"
 #include "rules.h"
 #include "scorer.h"
+#include "scorer_lookup_table.h"
 
 static void board_compare_score(uint64_t Data);
 
@@ -14,6 +15,8 @@ int main(void)
     tRules Rules;
     tRandom Random;
     tBoard Board;
+
+    scorer_init();
 
     rules_config_init(&RulesConfig);
 
@@ -28,7 +31,19 @@ int main(void)
     //board_compare_score(0x0000C37009D7C7EAULL);
     //board_compare_score(0x00004DEA8BCBC782ULL);
 
-    int Simulations = 10000;
+    //uint64_t Data = 0x00015A4522ED83F9ULL;
+    //uint64_t Data = 0x0000C469E29A9DBAULL;
+    //uint64_t Data = 0x00012C0386FF6F84ULL;
+    //uint64_t Data = 0x0001F2E3472E7304ULL;
+    //uint64_t Data = 0x0000CFE347DE1211ULL;
+    //uint64_t Data = 0x00002EFB271EC0E1ULL;
+    //board_compare_score(Data);
+
+    //tSize Score = board_lookup_longest_path(42, ~Data & BOARD_MASK);
+
+    //printf("board_lookup_longest_path score: %d\n", Score);
+
+    int Simulations = 1000000;
     int Failures = 0;
 
     for (int i = 0; i < Simulations; ++i)
@@ -55,6 +70,8 @@ int main(void)
     }
 
     printf("simulations: %d, failures: %d\n", Simulations, Failures);
+
+    scorer_free();
 
     return 0;
 }

@@ -7,6 +7,11 @@
 #include "random.h"
 #include "types.h"
 
+bool BitEmpty16(uint16_t Bits);
+bool BitTest16(uint16_t Bits, tIndex Index);
+void BitSet16(uint16_t *pBits, tIndex Index);
+void BitReset16(uint16_t *pBits, tIndex Index);
+tSize BitPopCount16(uint16_t Bits);
 bool BitEmpty64(uint64_t Bits);
 bool BitTest64(uint64_t Bits, tIndex Index);
 void BitSet64(uint64_t *pBits, tIndex Index);

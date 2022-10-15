@@ -4,6 +4,10 @@
 #include "board.h"
 #include "types.h"
 
+void scorer_init();
+void scorer_free();
+
 tScore score(tBoard *pBoard);
+tSize board_lookup_longest_path(tIndex Index, uint64_t Data);
 
 #endif

@@ -15,7 +15,8 @@
 
 typedef struct Area3x4PathLookup
 {
-    uint16_t LongestPath/*, LeastExitPath, ShortestPath*/;
+    uint16_t *Paths;
+    tSize Size;
 }
 tArea3x4PathLookup;
 
@@ -31,6 +32,11 @@ typedef struct Area3x4Lookup
     tArea3x4IndexLookup IndexPaths[AREA_3X4_INDICES];
 }
 tArea3x4Lookup;
+
+void scorer_area_3x4_lookup_init(void);
+void scorer_area_3x4_lookup_free(void);
+
+void area_3x4_print(uint16_t Data);
 
 const tArea3x4Lookup *scorer_area_3x4_lookup(uint16_t Data);
 
