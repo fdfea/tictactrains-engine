@@ -229,3 +229,21 @@ static void vector_resize(tVector *pVector, tSize Size, bool Grow)
         pVector->Capacity = Resize;
     }
 }
+
+void vector_iterator_init(tVectorIterator *pIterator, tVector* pVector)
+{
+    void **pBegin = pVector->ppItems;
+
+    pIterator->pCurrent = pBegin;
+    pIterator->pEnd = (char *) pBegin + vector_size(pVector) * sizeof(void *);
+}
+
+bool vector_iterator_has_next(tVectorIterator *pIterator)
+{
+    return (void *) pIterator->pCurrent < pIterator->pEnd;
+}
+
+void *vector_iterator_next(tVectorIterator *pIterator)
+{
+    return *pIterator->pCurrent++;
+}

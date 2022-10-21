@@ -36,9 +36,9 @@ static const tIndex board_area_index_c[ROWS*COLUMNS] = {
      0,  4,  8,  3,  2,  1,  0,
 };
 
-//static tSize board_lookup_longest_path(tIndex Index, uint64_t Data);
-static tSize area_3x4_lookup_longest_path(tIndex Index, uint64_t Data);
-static tSize area_1x1_lookup_longest_path(tIndex Index, uint64_t Data);
+static tSize board_lookup_longest_path(uint64_t Data, tIndex Index);
+static tSize area_3x4_lookup_longest_path(uint64_t Data, tIndex Index);
+static tSize area_1x1_lookup_longest_path(uint64_t Data, tIndex Index);
 
 static uint16_t extract_q0(uint64_t Data);
 static uint16_t extract_q1(uint64_t Data);
@@ -104,7 +104,7 @@ static const tIndex (*board_area_exit_index_q[ROWS*COLUMNS])(tIndex) = {
     board_area_exit_index_q4, board_area_exit_index_q4, board_area_exit_index_q4, board_area_exit_index_q3, board_area_exit_index_q3, board_area_exit_index_q3, board_area_exit_index_q3,
 };
 
-static const tSize (*area_lookup_longest_path[ROWS*COLUMNS])(tIndex, uint64_t) = {
+static const tSize (*area_lookup_longest_path[ROWS*COLUMNS])(uint64_t, tIndex) = {
     area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path,
     area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path,
     area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path,
@@ -114,18 +114,14 @@ static const tSize (*area_lookup_longest_path[ROWS*COLUMNS])(tIndex, uint64_t) =
     area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path,
 };
 
-static const tIndex Area3x4ExitIndexLookup[AREA_3X4_EXITS] = { 3, 7, 11, 8, 9, 10, 11 };
-
-#define AREA_3X4_EXIT_INDEX(i)      Area3x4ExitIndexLookup[i]
-
 void scorer_init()
 {
-    scorer_area_3x4_lookup_init();
+    scorer_lookup_init();
 }
 
 void scorer_free()
 {
-    scorer_area_3x4_lookup_free();
+    scorer_lookup_free();
 }
 
 tScore score(tBoard *pBoard)
@@ -136,7 +132,7 @@ tScore score(tBoard *pBoard)
     {
         bool Player = board_index_player(pBoard, Index);
         uint64_t Data = IF Player THEN pBoard->Data ELSE ~pBoard->Data & BOARD_MASK;
-        tScore Score = board_lookup_longest_path(Index, Data);
+        tScore Score = board_lookup_longest_path(Data, Index);
 
         if (Player)
         {
@@ -155,96 +151,66 @@ tScore score(tBoard *pBoard)
     return ScoreX - ScoreO;
 }
 
-tSize board_lookup_longest_path(tIndex Index, uint64_t Data)
+static tSize board_lookup_longest_path(uint64_t Data, tIndex Index)
 {
-    return (*area_lookup_longest_path[Index])(Index, Data);
+    return (*area_lookup_longest_path[Index])(Data, Index);
 }
 
-static tSize area_3x4_lookup_longest_path(tIndex Index, uint64_t Data)
+static tSize area_3x4_lookup_longest_path(uint64_t Data, tIndex Index)
 {
-    //printf("in area_3x4_lookup_longest_path\n");
-
-    const tArea3x4Lookup *pAreaLookup = scorer_area_3x4_lookup((*extract_q[Index])(Data));
-    const tArea3x4IndexLookup *pAreaIndexLookup = &pAreaLookup->IndexPaths[board_area_index_c[Index]];
+    tArea3x4Lookup *pLookup = scorer_area_3x4_lookup((*extract_q[Index])(Data));
+    tArea3x4IndexLookup *pIndexLookup = &pLookup->Indices[board_area_index_c[Index]];
     tSize MaxPathLength = 0;
 
-    tBoard Board;
-    Board.Data = Data;
-    Board.Empty = 0ULL;
-    //char *ppStr = board_string(&Board);
-    //printf("board:\n%s\n", ppStr);
-    //free(ppStr);
-    //printf("traversing index: %d\n", Index);
+    SET_IF_GREATER(pIndexLookup->LongestPath, MaxPathLength);
 
-    for (tIndex i = 0; i < AREA_3X4_EXITS; ++i)
+    tVector *pExitLookup = &pIndexLookup->Exits;
+    tVectorIterator ExitsIterator;
+
+    vector_iterator_init(&ExitsIterator, pExitLookup);
+
+    while (vector_iterator_has_next(&ExitsIterator))
     {
-        const tArea3x4PathLookup* pAreaPathLookup = &pAreaIndexLookup->ExitPaths[i];
-        tIndex NextIndex = (*board_area_exit_index_q[Index])(i);
-
-        //printf("traversing path: %d -> %d, next index: %d\n", Index, i, NextIndex);
-
-        SET_IF_GREATER(pAreaIndexLookup->LongestPath, MaxPathLength);
+        tArea3x4PathLookup *pPathLookup = (tArea3x4PathLookup *) vector_iterator_next(&ExitsIterator);
+        tIndex NextIndex = (*board_area_exit_index_q[Index])(pPathLookup->Exit);
 
         if (BitTest64(Data, NextIndex))
         {
-            //printf("checking next index: %d, paths size: %d\n", NextIndex, pAreaPathLookup->Size);
+            tVector *pPaths = &pPathLookup->Paths;
+            tVectorIterator PathsIterator;
 
-            for (tIndex j = 0; j < pAreaPathLookup->Size; ++j)
+            vector_iterator_init(&PathsIterator, pPaths);
+
+            while (vector_iterator_has_next(&PathsIterator))
             {
-                uint16_t Path = pAreaPathLookup->Paths[j];
-                tSize PathLength = BitPopCount16(Path & AREA_3X4_MASK);
-                uint64_t PathConverted = (*convert_q[Index])(Path);
-                uint64_t NextData = Data & ~PathConverted & BOARD_MASK;
-
-                tBoard Converted;
-                Converted.Data = PathConverted;
-                Converted.Empty = 0ULL;
-                //char *Str = board_string(&Converted);
-                //printf("path converted:\n%s\n", Str);
-                //free(Str);
-
-                //printf("checking path:\n");
-                //area_3x4_print(Path);
-                tBoard Brd;
-                Brd.Data = NextData;
-                Brd.Empty = 0ULL;
-                //char *pStr = board_string(&Brd);
-                //printf("next data:\n%s\n", pStr);
-                //free(pStr);
-
-                tSize LookupLength = PathLength + board_lookup_longest_path(NextIndex, NextData);
+                tArea3x4Path *pPath = (tArea3x4Path *) vector_iterator_next(&PathsIterator);
+                uint64_t PathConverted = (*convert_q[Index])(pPath->Path);
+                tSize LookupLength = pPath->Length + board_lookup_longest_path(Data & ~PathConverted, NextIndex);
 
                 SET_IF_GREATER(LookupLength, MaxPathLength);
             }
         }
     }
 
-    //printf("area_3x4_lookup_longest_path -- index: %d, max length: %d\n", Index, MaxPathLength);
-
     return MaxPathLength;
 }
 
-static tSize area_1x1_lookup_longest_path(tIndex Index, uint64_t Data)
+static tSize area_1x1_lookup_longest_path(uint64_t Data, tIndex Index)
 {
-    //printf("in area_1x1_lookup_longest_path\n");
-
     tSize MaxPathLength = 0;
 
     BitReset64(&Data, Index);
 
     for (tIndex i = 0; i < AREA_1X1_EXITS; ++i)
     {
-        tIndex ExitIndex = (*board_area_exit_index_q[Index])(i);
+        tIndex NextIndex = (*board_area_exit_index_q[Index])(i);
 
-        if (BitTest64(Data, ExitIndex))
+        if (BitTest64(Data, NextIndex))
         {
-            //printf("area_1x1_lookup_longest_path -- index: %d, next index: %d\n", Index, ExitIndex);
-            tSize PathLength = board_lookup_longest_path(ExitIndex, Data);
+            tSize PathLength = board_lookup_longest_path(Data, NextIndex);
             SET_IF_GREATER(PathLength, MaxPathLength);
         }
     }
-
-    //printf("area_1x1_lookup_longest_path -- index: %d, max length: %d\n", Index, 1 + MaxPathLength);
 
     return 1 + MaxPathLength;
 }
