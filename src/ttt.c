@@ -18,6 +18,10 @@
 #include "util.h"
 #include "vector.h"
 
+#ifdef SPEED
+#include "scorer.h"
+#endif
+
 static int ttt_get_player_move(tTTT *pGame, bool ComputerPlaying);
 static int ttt_load_moves(tTTT *pGame, tVector *pMoves);
 
@@ -45,6 +49,10 @@ int main(void)
     {
         goto FreeConfig;
     }
+
+#ifdef SPEED
+    scorer_init();
+#endif
 
     char *pBoardStr, *pMovesStr;
 #ifdef STATS
@@ -114,6 +122,10 @@ int main(void)
 
     int Score = ttt_get_score(&Game);
     printf("Score: %d\n", Score);
+
+#ifdef SPEED
+    scorer_free();
+#endif
 
 FreeGame:
     ttt_free(&Game);
@@ -231,7 +243,7 @@ bool ttt_finished(tTTT *pGame)
 
 int ttt_get_score(tTTT *pGame)
 {
-    return board_score(&pGame->Board, SCORING_ALGORITHM_OPTIMAL);
+    return board_score(&pGame->Board);
 }
 
 int *ttt_get_moves(tTTT *pGame, int *pSize)

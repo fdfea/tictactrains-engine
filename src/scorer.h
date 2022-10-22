@@ -7,6 +7,6 @@
 void scorer_init();
 void scorer_free();
 
-tScore score(tBoard *pBoard);
+tScore scorer_score(tBoard *pBoard);
 
 #endif

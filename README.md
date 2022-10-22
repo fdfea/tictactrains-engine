@@ -37,6 +37,7 @@ The definitions available are:
 * `DEBUG` – Print debug information (will make the program slower)
 * `STATS` – Print statistics for the computer opponent search tree on each move
 * `TIMED` – Print the time the computer spent simulating on each move
+* `SPEED` – Optimize computer opponent for speed (~25% faster, ~30MB constant extra memory usage)
 * `PACKED` – Pack the structs in the search tree to reduce memory usage (may be slower on some architectures)
 * `VISITS32` – Use a 32-bit integer for node visits in the search tree to allow for deeper searches (default is 16-bit)
 
@@ -53,7 +54,6 @@ The options are:
 * `COMPUTER_PLAYER` – If the computer is playing, whether the computer or player should move first
 * `RULES_TYPE` – The rule set to use
 * `SIMULATIONS` – How many simulations the computer should run before making a move
-* `SCORING_ALGORITHM` – The algorithm to score simulated games
 * `SEARCH_ONLY_NEIGHBORS` – Whether the computer should only search neighboring states (i.e. states in which the next move is a square that is directly adjacent or diagonal to an occupied square)
 * `STARTING_POSITION` – A list of moves from which to start the game
 
