@@ -232,18 +232,18 @@ static void vector_resize(tVector *pVector, tSize Size, bool Grow)
 
 void vector_iterator_init(tVectorIterator *pIterator, tVector* pVector)
 {
-    void **pBegin = pVector->ppItems;
+    void **ppBegin = pVector->ppItems;
 
-    pIterator->pCurrent = pBegin;
-    pIterator->pEnd = (char *) pBegin + vector_size(pVector) * sizeof(void *);
+    pIterator->ppCurrent = ppBegin;
+    pIterator->ppEnd = ppBegin + vector_size(pVector) * sizeof(void *);
 }
 
 bool vector_iterator_has_next(tVectorIterator *pIterator)
 {
-    return (void *) pIterator->pCurrent < pIterator->pEnd;
+    return pIterator->ppCurrent < pIterator->ppEnd;
 }
 
 void *vector_iterator_next(tVectorIterator *pIterator)
 {
-    return *pIterator->pCurrent++;
+    return *pIterator->ppCurrent++;
 }

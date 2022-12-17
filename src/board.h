@@ -22,7 +22,9 @@ Board
 {
     uint64_t Data;
     uint64_t Empty;
+#ifdef SPEED
     uint64_t Neighbors;
+#endif
 }
 tBoard;
 
@@ -32,7 +34,7 @@ bool board_equals(tBoard *pBoard, tBoard *pB);
 int board_advance(tBoard *pBoard, tIndex Index, bool Player);
 bool board_finished(tBoard *pBoard);
 tSize board_move(tBoard *pBoard);
-uint64_t board_empty_indices(tBoard *pBoard, uint64_t Constraint, bool OnlyNeighbors);
+uint64_t board_available_indices(tBoard *pBoard, uint64_t Constraint, bool OnlyNeighbors);
 tIndex board_last_move_index(tBoard *pBoard);
 tScore board_score(tBoard *pBoard);
 char *board_string(tBoard *pBoard);

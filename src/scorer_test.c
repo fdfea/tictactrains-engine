@@ -1,3 +1,4 @@
+/*
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -10,7 +11,6 @@
 
 int main(void)
 {
-    /*
     bool array1[ROWS*COLUMNS] = {
         1, 1, 1, 1, 0, 0, 0,
         1, 1, 1, 1, 0, 0, 0,
@@ -74,7 +74,6 @@ int main(void)
         if (array4[i]) BitSet64(&q4_mask, i);
     }
     printf("q4_mask: 0x%016I64XULL\n", q4_mask);
-    */
 
     tRulesConfig RulesConfig;
     tRules Rules;
@@ -128,3 +127,4 @@ int main(void)
 
     return 0;
 }
+*/

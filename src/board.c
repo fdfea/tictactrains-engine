@@ -13,8 +13,8 @@
 #include "scorer.h"
 #endif
 
-#define BOARD_LAST_MOVE_INDEX       56
-#define BOARD_MIN_NEIGHBOR_INDICES  6
+#define BOARD_LAST_MOVE_INDEX           56
+#define BOARD_MIN_NEIGHBORS_AVAILABLE   6
 
 static const uint64_t IndicesLookup[ROWS*COLUMNS][2] = {
     { 0x0000000000000082ULL, 0x0000000000000182ULL },
@@ -140,15 +140,16 @@ static const tIndexLookup IndexLookup[ROWS*COLUMNS] = {
 #define TOP(i)          (IndexLookup[i].Top)
 #define BOTTOM(i)       (IndexLookup[i].Bottom)
 
-static bool board_index_traversable(tBoard *pBoard, tIndex Index, bool Player, uint64_t Checked);
-static tSize board_index_longest_path(tBoard *pBoard, tIndex Index, uint64_t Checked);
+static tSize board_index_longest_path(uint64_t Data, tIndex Index);
 #endif
 
 void board_init(tBoard *pBoard)
 {
     pBoard->Data = 0ULL;
     pBoard->Empty = UINT64_MAX & BOARD_MASK;
+#ifdef SPEED
     pBoard->Neighbors = 0ULL;
+#endif
 }
 
 void board_copy(tBoard *pBoard, tBoard *pB)
@@ -179,7 +180,9 @@ int board_advance(tBoard *pBoard, tIndex Index, bool Player)
 
     BitReset64(&pBoard->Empty, Index);
 
+#ifdef SPEED
     pBoard->Neighbors = (pBoard->Neighbors | NEIGHBOR_INDICES(Index)) & pBoard->Empty;
+#endif
     pBoard->Data = (pBoard->Data & BOARD_MASK) | (uint64_t) Index << BOARD_LAST_MOVE_INDEX;
 
 Error:
@@ -201,21 +204,41 @@ bool board_index_valid(tIndex Index)
     return Index >= 0 AND Index < ROWS*COLUMNS;
 }
 
-uint64_t board_empty_indices(tBoard *pBoard, uint64_t Constraint, bool OnlyNeighbors)
+uint64_t board_available_indices(tBoard *pBoard, uint64_t Constraint, bool OnlyNeighbors)
 {
-    uint64_t Empty = pBoard->Empty & Constraint;
+    uint64_t Available = pBoard->Empty & Constraint;
 
     if (OnlyNeighbors)
     {
+#ifdef SPEED
         uint64_t Neighbors = pBoard->Neighbors & Constraint;
 
-        if (BitPopCount64(Neighbors) >= BOARD_MIN_NEIGHBOR_INDICES)
+        if (BitPopCount64(Neighbors) >= BOARD_MIN_NEIGHBORS_AVAILABLE)
         {
-            Empty = Neighbors;
+            Available = Neighbors;
         }
+#else
+        uint64_t Neighbors = 0ULL, Occupied = ~pBoard->Empty;
+
+        while (NOT BitEmpty64(Occupied))
+        {
+            tIndex Index = BitTzCount64(Occupied);
+
+            Neighbors |= NEIGHBOR_INDICES(Index);
+
+            BitReset64(&Occupied, Index);
+        }
+
+        Neighbors &= Available;
+
+        if (BitPopCount64(Neighbors) >= BOARD_MIN_NEIGHBORS_AVAILABLE)
+        {
+            Available = Neighbors;
+        }
+#endif
     }
 
-    return Empty;
+    return Available;
 }
 
 tIndex board_last_move_index(tBoard *pBoard)
@@ -234,9 +257,11 @@ tScore board_score(tBoard *pBoard)
     while (NOT BitEmpty64(NotEmpty))
     {
         tIndex Index = BitTzCount64(NotEmpty);
-        tSize Score = board_index_longest_path(pBoard, Index, 0ULL);
+        bool Player = board_index_player(pBoard, Index);
+        uint64_t Data = IF (Player) THEN pBoard->Data ELSE ~pBoard->Data;
+        tSize Score = board_index_longest_path(Data & BOARD_MASK, Index);
 
-        if (board_index_player(pBoard, Index))
+        if (Player)
         {
             SET_IF_GREATER(Score, ScoreX);
         }
@@ -337,40 +362,33 @@ bool board_index_player(tBoard *pBoard, tIndex Index)
 }
 
 #ifndef SPEED
-static bool board_index_traversable(tBoard *pBoard, tIndex Index, bool Player, uint64_t Checked)
+static tSize board_index_longest_path(uint64_t Data, tIndex Index)
 {
-    return NOT board_index_empty(pBoard, Index) 
-        AND board_index_player(pBoard, Index) == Player 
-        AND NOT BitTest64(Checked, Index);
-}
+    tSize PathLength, MaxPathLength = 0;
 
-static tSize board_index_longest_path(tBoard *pBoard, tIndex Index, uint64_t Checked)
-{
-    tSize MaxPathLen = 0;
-    bool Player = board_index_player(pBoard, Index);
-    BitSet64(&Checked, Index);
+    BitReset64(&Data, Index);
 
-    if (LEFT_VALID(Index) AND board_index_traversable(pBoard, LEFT(Index), Player, Checked))
+    if (LEFT_VALID(Index) AND BitTest64(Data, LEFT(Index)))
     {
-        tSize PathLen = board_index_longest_path(pBoard, LEFT(Index), Checked);
-        SET_IF_GREATER(PathLen, MaxPathLen);
+        PathLength = board_index_longest_path(Data, LEFT(Index));
+        SET_IF_GREATER(PathLength, MaxPathLength);
     }
-    if (RIGHT_VALID(Index) AND board_index_traversable(pBoard, RIGHT(Index), Player, Checked))
+    if (RIGHT_VALID(Index) AND BitTest64(Data, RIGHT(Index)))
     {
-        tSize PathLen = board_index_longest_path(pBoard, RIGHT(Index), Checked);
-        SET_IF_GREATER(PathLen, MaxPathLen);
+        PathLength = board_index_longest_path(Data, RIGHT(Index));
+        SET_IF_GREATER(PathLength, MaxPathLength);
     }
-    if (TOP_VALID(Index) AND board_index_traversable(pBoard, TOP(Index), Player, Checked))
+    if (TOP_VALID(Index) AND BitTest64(Data, TOP(Index)))
     {
-        tSize PathLen = board_index_longest_path(pBoard, TOP(Index), Checked);
-        SET_IF_GREATER(PathLen, MaxPathLen);
+        PathLength = board_index_longest_path(Data, TOP(Index));
+        SET_IF_GREATER(PathLength, MaxPathLength);
     }
-    if (BOTTOM_VALID(Index) AND board_index_traversable(pBoard, BOTTOM(Index), Player, Checked))
+    if (BOTTOM_VALID(Index) AND BitTest64(Data, BOTTOM(Index)))
     {
-        tSize PathLen = board_index_longest_path(pBoard, BOTTOM(Index), Checked);
-        SET_IF_GREATER(PathLen, MaxPathLen);
+        PathLength = board_index_longest_path(Data, BOTTOM(Index));
+        SET_IF_GREATER(PathLength, MaxPathLength);
     }
 
-    return 1 + MaxPathLen;
+    return MaxPathLength + 1;
 }
 #endif

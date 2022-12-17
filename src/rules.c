@@ -31,7 +31,7 @@ void rules_config_init(tRulesConfig *pConfig)
 
 uint64_t rules_indices(tRules *pRules, tBoard *pBoard, bool OnlyNeighbors)
 {
-    return board_empty_indices(pBoard, rules_policy(pRules, pBoard), OnlyNeighbors);
+    return board_available_indices(pBoard, rules_policy(pRules, pBoard), OnlyNeighbors);
 }
 
 bool rules_player(tRules *pRules, tBoard *pBoard)
