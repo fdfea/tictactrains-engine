@@ -9,28 +9,14 @@
 #include "util.h"
 #include "vector.h"
 
-//delete
-#include <stdio.h>
+#define AREA_1X1_EXITS      4
+#define AREA_1X1_INDICES    1
+#define AREA_1X1_MASK       0x0001U
 
 #define AREA_3X4_INDICES        12
 #define AREA_3X4_EXITS          7
 #define AREA_3X4_MASK           0x0FFFU
 #define AREA_3X4_LOOKUP_SIZE    4096
-
-#define AREA_1X1_EXITS      4
-#define AREA_1X1_INDICES    1
-#define AREA_1X1_MASK       0x0001U
-
-#define AREA_Q1         0
-#define AREA_Q2         1
-#define AREA_Q3         2
-#define AREA_Q4         3
-#define AREA_QUADRANTS  4
-
-#define AREA_Q1_MASK     0x000000000003C78FULL
-#define AREA_Q2_MASK     0x000000000E1C3870ULL
-#define AREA_Q3_MASK     0x0001E3C780000000ULL
-#define AREA_Q4_MASK     0x00001C3870E00000ULL
 
 #define AREA_3x4_MASK_00_02     0x0007U
 #define AREA_3x4_MASK_03_05     0x0038U
@@ -40,6 +26,12 @@
 #define AREA_3x4_MASK_00_03     0x000FU
 #define AREA_3x4_MASK_04_07     0x00F0U
 #define AREA_3x4_MASK_08_11     0x0F00U
+
+#define BOARD_QUADRANTS     4
+#define BOARD_Q1_MASK       0x000000000003C78FULL
+#define BOARD_Q2_MASK       0x000000000E1C3870ULL
+#define BOARD_Q3_MASK       0x0001E3C780000000ULL
+#define BOARD_Q4_MASK       0x00001C3870E00000ULL
 
 typedef struct Area3x4Path
 {
@@ -82,23 +74,29 @@ static const tIndex BoardAreaExitIndicesQ3[AREA_3X4_EXITS] = { 44, 37, 30, 27, 2
 static const tIndex BoardAreaExitIndicesQ4[AREA_3X4_EXITS] = { 14, 15, 16, 45, 38, 31, 24 };
 
 static tArea3x4Lookup Area3x4Lookup[AREA_3X4_LOOKUP_SIZE] = { 0 };
+static uint64_t Area3x4ExpansionLookup[BOARD_QUADRANTS][AREA_3X4_LOOKUP_SIZE] = { 0 };
+static uint16_t Area3x4RotationLookup[BOARD_QUADRANTS][AREA_3X4_LOOKUP_SIZE] = { 0 };
 
-// convert uint16_t to uint64_t
-static uint64_t Area3x4Expand[AREA_QUADRANTS][AREA_3X4_LOOKUP_SIZE] = { 0 };
-
-// convert uint64_t to uint16_t (need to mask off bits)
-static uint16_t Area3x4Contract[AREA_QUADRANTS][AREA_3X4_LOOKUP_SIZE] = { 0 };
+static const tIndex Area3x4IndexLookup[ROWS*COLUMNS] = {
+    0,  1,  2,  3,  8,  4,  0,
+    4,  5,  6,  7,  9,  5,  1,
+    8,  9, 10, 11, 10,  6,  2,
+    3,  7, 11,  0, 11,  7,  3,
+    2,  6, 10, 11, 10,  9,  8,
+    1,  5,  9,  7,  6,  5,  4,
+    0,  4,  8,  3,  2,  1,  0,
+};
 
 static const tIndex Area3x4ExitIndexLookup[AREA_3X4_EXITS] = { 3, 7, 11, 8, 9, 10, 11 };
 
-static const tIndex board_area_index_c[ROWS*COLUMNS] = {
-     0,  1,  2,  3,  8,  4,  0, 
-     4,  5,  6,  7,  9,  5,  1,
-     8,  9, 10, 11, 10,  6,  2,
-     3,  7, 11,  0, 11,  7,  3,
-     2,  6, 10, 11, 10,  9,  8,
-     1,  5,  9,  7,  6,  5,  4, 
-     0,  4,  8,  3,  2,  1,  0,
+static const tIndex Area3x4QuadrantLookup[ROWS*COLUMNS] = {
+    0, 0, 0, 0, 1, 1, 1,
+    0, 0, 0, 0, 1, 1, 1,
+    0, 0, 0, 0, 1, 1, 1, 
+    3, 3, 3, 0, 1, 1, 1,
+    3, 3, 3, 2, 2, 2, 2,
+    3, 3, 3, 2, 2, 2, 2,
+    3, 3, 3, 2, 2, 2, 2,
 };
 
 static const tArea3x4AdjacentIndexLookup Area3x4AdjacentIndexLookup[AREA_3X4_INDICES] = {
@@ -116,21 +114,19 @@ static const tArea3x4AdjacentIndexLookup Area3x4AdjacentIndexLookup[AREA_3X4_IND
     { true , false, true , false, 10,  0,  7,  0 },
 };
 
-#define LEFT_VALID(i)       Area3x4AdjacentIndexLookup[i].LeftValid
-#define RIGHT_VALID(i)      Area3x4AdjacentIndexLookup[i].RightValid
-#define TOP_VALID(i)        Area3x4AdjacentIndexLookup[i].TopValid
-#define BOTTOM_VALID(i)     Area3x4AdjacentIndexLookup[i].BottomValid
+#define AREA_3X4_INDEX(i)           (Area3x4IndexLookup[i])
+#define AREA_3X4_EXIT_INDEX(i)      (Area3x4ExitIndexLookup[i])
+#define AREA_3X4_QUADRANT(i)        (Area3x4QuadrantLookup[i])
 
-#define LEFT(i)         Area3x4AdjacentIndexLookup[i].Left
-#define RIGHT(i)        Area3x4AdjacentIndexLookup[i].Right
-#define TOP(i)          Area3x4AdjacentIndexLookup[i].Top
-#define BOTTOM(i)       Area3x4AdjacentIndexLookup[i].Bottom
+#define LEFT_VALID(i)       (Area3x4AdjacentIndexLookup[i].LeftValid)
+#define RIGHT_VALID(i)      (Area3x4AdjacentIndexLookup[i].RightValid)
+#define TOP_VALID(i)        (Area3x4AdjacentIndexLookup[i].TopValid)
+#define BOTTOM_VALID(i)     (Area3x4AdjacentIndexLookup[i].BottomValid)
 
-#define AREA_3X4_EXIT_INDEX(i)      Area3x4ExitIndexLookup[i]
-
-static tSize scorer_lookup_longest_path(uint64_t Data, tIndex Index);
-static tSize area_3x4_lookup_longest_path(uint64_t Data, tIndex Index);
-static tSize area_1x1_lookup_longest_path(uint64_t Data, tIndex Index);
+#define LEFT(i)         (Area3x4AdjacentIndexLookup[i].Left)
+#define RIGHT(i)        (Area3x4AdjacentIndexLookup[i].Right)
+#define TOP(i)          (Area3x4AdjacentIndexLookup[i].Top)
+#define BOTTOM(i)       (Area3x4AdjacentIndexLookup[i].Bottom)
 
 static tSize area_3x4_index_longest_path(uint16_t Data, tIndex Index);
 static bool area_3x4_longest_path(uint16_t Data, tIndex Start, tIndex End, tSize *pLength, uint16_t *pPath);
@@ -138,20 +134,8 @@ static bool area_3x4_has_through_path(uint16_t Data);
 static bool area_3x4_has_path(uint16_t Data, tIndex Start, tIndex End);
 static void area_3x4_get_lookup_paths(uint16_t Data, tIndex Start, tIndex End, uint16_t Path, tVector *pVector);
 
-static uint16_t extract_q1(uint64_t Data);
-static uint16_t extract_q2(uint64_t Data);
-static uint16_t extract_q3(uint64_t Data);
-static uint16_t extract_q4(uint64_t Data);
-
-static uint16_t contract_q1(uint64_t Data);
-static uint16_t contract_q2(uint64_t Data);
-static uint16_t contract_q3(uint64_t Data);
-static uint16_t contract_q4(uint64_t Data);
-
-static uint64_t convert_q1(uint16_t Data);
-static uint64_t convert_q2(uint16_t Data);
-static uint64_t convert_q3(uint16_t Data);
-static uint64_t convert_q4(uint16_t Data);
+static tSize area_3x4_lookup_longest_path(uint64_t Data, tIndex Index);
+static tSize area_1x1_lookup_longest_path(uint64_t Data, tIndex Index);
 
 static tIndex board_area_exit_index_q0(tIndex Index);
 static tIndex board_area_exit_index_q1(tIndex Index);
@@ -159,34 +143,24 @@ static tIndex board_area_exit_index_q2(tIndex Index);
 static tIndex board_area_exit_index_q3(tIndex Index);
 static tIndex board_area_exit_index_q4(tIndex Index);
 
-static const uint16_t (*extract_q[ROWS*COLUMNS])(uint64_t) = {
-    extract_q1, extract_q1, extract_q1, extract_q1, extract_q2, extract_q2, extract_q2,
-    extract_q1, extract_q1, extract_q1, extract_q1, extract_q2, extract_q2, extract_q2,
-    extract_q1, extract_q1, extract_q1, extract_q1, extract_q2, extract_q2, extract_q2,
-    extract_q4, extract_q4, extract_q4,       NULL, extract_q2, extract_q2, extract_q2,
-    extract_q4, extract_q4, extract_q4, extract_q3, extract_q3, extract_q3, extract_q3,
-    extract_q4, extract_q4, extract_q4, extract_q3, extract_q3, extract_q3, extract_q3,
-    extract_q4, extract_q4, extract_q4, extract_q3, extract_q3, extract_q3, extract_q3,
-};
+static uint64_t area_3x4_expand_q1(uint16_t Data);
+static uint64_t area_3x4_expand_q2(uint16_t Data);
+static uint64_t area_3x4_expand_q3(uint16_t Data);
+static uint64_t area_3x4_expand_q4(uint16_t Data);
 
-static const uint16_t (*contract_q [ROWS*COLUMNS])(uint64_t) = {
-    contract_q1, contract_q1, contract_q1, contract_q1, contract_q2, contract_q2, contract_q2,
-    contract_q1, contract_q1, contract_q1, contract_q1, contract_q2, contract_q2, contract_q2,
-    contract_q1, contract_q1, contract_q1, contract_q1, contract_q2, contract_q2, contract_q2,
-    contract_q4, contract_q4, contract_q4,        NULL, contract_q2, contract_q2, contract_q2,
-    contract_q4, contract_q4, contract_q4, contract_q3, contract_q3, contract_q3, contract_q3,
-    contract_q4, contract_q4, contract_q4, contract_q3, contract_q3, contract_q3, contract_q3,
-    contract_q4, contract_q4, contract_q4, contract_q3, contract_q3, contract_q3, contract_q3,
-};
+static uint16_t area_3x4_contract_q1(uint64_t Data);
+static uint16_t area_3x4_contract_q2(uint64_t Data);
+static uint16_t area_3x4_contract_q3(uint64_t Data);
+static uint16_t area_3x4_contract_q4(uint64_t Data);
 
-static const uint64_t (*convert_q[ROWS*COLUMNS])(uint16_t) = {
-    convert_q1, convert_q1, convert_q1, convert_q1, convert_q2, convert_q2, convert_q2,
-    convert_q1, convert_q1, convert_q1, convert_q1, convert_q2, convert_q2, convert_q2,
-    convert_q1, convert_q1, convert_q1, convert_q1, convert_q2, convert_q2, convert_q2,
-    convert_q4, convert_q4, convert_q4,       NULL, convert_q2, convert_q2, convert_q2,
-    convert_q4, convert_q4, convert_q4, convert_q3, convert_q3, convert_q3, convert_q3,
-    convert_q4, convert_q4, convert_q4, convert_q3, convert_q3, convert_q3, convert_q3,
-    convert_q4, convert_q4, convert_q4, convert_q3, convert_q3, convert_q3, convert_q3,
+static const tSize (*board_area_lookup_longest_path[ROWS*COLUMNS])(uint64_t, tIndex) = {
+    area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path,
+    area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path,
+    area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path,
+    area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_1x1_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path,
+    area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path,
+    area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path,
+    area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path,
 };
 
 static const tIndex (*board_area_exit_index_q[ROWS*COLUMNS])(tIndex) = {
@@ -199,32 +173,25 @@ static const tIndex (*board_area_exit_index_q[ROWS*COLUMNS])(tIndex) = {
     board_area_exit_index_q4, board_area_exit_index_q4, board_area_exit_index_q4, board_area_exit_index_q3, board_area_exit_index_q3, board_area_exit_index_q3, board_area_exit_index_q3,
 };
 
-static const tSize (*area_lookup_longest_path[ROWS*COLUMNS])(uint64_t, tIndex) = {
-    area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path,
-    area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path,
-    area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path,
-    area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_1x1_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path,
-    area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path,
-    area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path,
-    area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path, area_3x4_lookup_longest_path,
+static const uint16_t (*area_3x4_contract_q[ROWS*COLUMNS])(uint64_t) = {
+    area_3x4_contract_q1, area_3x4_contract_q1, area_3x4_contract_q1, area_3x4_contract_q1, area_3x4_contract_q2, area_3x4_contract_q2, area_3x4_contract_q2,
+    area_3x4_contract_q1, area_3x4_contract_q1, area_3x4_contract_q1, area_3x4_contract_q1, area_3x4_contract_q2, area_3x4_contract_q2, area_3x4_contract_q2,
+    area_3x4_contract_q1, area_3x4_contract_q1, area_3x4_contract_q1, area_3x4_contract_q1, area_3x4_contract_q2, area_3x4_contract_q2, area_3x4_contract_q2,
+    area_3x4_contract_q4, area_3x4_contract_q4, area_3x4_contract_q4,                 NULL, area_3x4_contract_q2, area_3x4_contract_q2, area_3x4_contract_q2,
+    area_3x4_contract_q4, area_3x4_contract_q4, area_3x4_contract_q4, area_3x4_contract_q3, area_3x4_contract_q3, area_3x4_contract_q3, area_3x4_contract_q3,
+    area_3x4_contract_q4, area_3x4_contract_q4, area_3x4_contract_q4, area_3x4_contract_q3, area_3x4_contract_q3, area_3x4_contract_q3, area_3x4_contract_q3,
+    area_3x4_contract_q4, area_3x4_contract_q4, area_3x4_contract_q4, area_3x4_contract_q3, area_3x4_contract_q3, area_3x4_contract_q3, area_3x4_contract_q3,
 };
 
-static const tIndex board_area_quadrant[ROWS*COLUMNS] = {
-    0, 0, 0, 0, 1, 1, 1,
-    0, 0, 0, 0, 1, 1, 1,
-    0, 0, 0, 0, 1, 1, 1,
-    3, 3, 3, 4, 1, 1, 1,
-    3, 3, 3, 2, 2, 2, 2,
-    3, 3, 3, 2, 2, 2, 2,
-    3, 3, 3, 2, 2, 2, 2,
-};
+#define BOARD_AREA_LONGEST_PATH(Data, Index)    ((*board_area_lookup_longest_path[Index])(Data, Index))
+#define BOARD_AREA_EXIT_INDEX_Q(Index, Exit)    ((*board_area_exit_index_q[Index])(Exit))
 
-static void area_3x4_print(uint16_t Data);
-static void area_7x7_print(uint64_t Data);
+#define AREA_3X4_EXPAND_Q(Data, Index)      (Area3x4ExpansionLookup[AREA_3X4_QUADRANT(Index)][Data])
+#define AREA_3X4_ROTATE_Q(Data, Index)      (Area3x4RotationLookup[AREA_3X4_QUADRANT(Index)][(*area_3x4_contract_q[Index])(Data)])
 
 void scorer_init()
 {
-    for (uint16_t Data = 0; Data < AREA_3X4_LOOKUP_SIZE; ++Data)
+    for (uint16_t Data = 0U; Data < AREA_3X4_LOOKUP_SIZE; ++Data)
     {
         tArea3x4Lookup *pLookup = &Area3x4Lookup[Data];
 
@@ -286,31 +253,22 @@ void scorer_init()
                 }
             }
         }
+
+        uint64_t Expansion1 = area_3x4_expand_q1(Data);
+        uint64_t Expansion2 = area_3x4_expand_q2(Data);
+        uint64_t Expansion3 = area_3x4_expand_q3(Data);
+        uint64_t Expansion4 = area_3x4_expand_q4(Data);
+
+        Area3x4ExpansionLookup[0][Data] = Expansion1;
+        Area3x4ExpansionLookup[1][Data] = Expansion2;
+        Area3x4ExpansionLookup[2][Data] = Expansion3;
+        Area3x4ExpansionLookup[3][Data] = Expansion4;
+
+        Area3x4RotationLookup[0][area_3x4_contract_q1(Expansion1)] = Data;
+        Area3x4RotationLookup[1][area_3x4_contract_q2(Expansion2)] = Data;
+        Area3x4RotationLookup[2][area_3x4_contract_q3(Expansion3)] = Data;
+        Area3x4RotationLookup[3][area_3x4_contract_q4(Expansion4)] = Data;
     }
-
-    for (uint16_t Data = 0U; Data < AREA_3X4_LOOKUP_SIZE; ++Data)
-    {
-        uint64_t Q1 = convert_q1(Data);
-        uint64_t Q2 = convert_q2(Data);
-        uint64_t Q3 = convert_q3(Data);
-        uint64_t Q4 = convert_q4(Data);
-
-        Area3x4Expand[AREA_Q1][Data] = Q1;
-        Area3x4Expand[AREA_Q2][Data] = Q2;
-        Area3x4Expand[AREA_Q3][Data] = Q3;
-        Area3x4Expand[AREA_Q4][Data] = Q4;
-
-        uint16_t X1 = contract_q1(Q1);
-        uint16_t X2 = contract_q2(Q2);
-        uint16_t X3 = contract_q3(Q3);
-        uint16_t X4 = contract_q4(Q4);
-
-        Area3x4Contract[AREA_Q1][X1] = Data;
-        Area3x4Contract[AREA_Q2][X2] = Data;
-        Area3x4Contract[AREA_Q3][X3] = Data;
-        Area3x4Contract[AREA_Q4][X4] = Data;
-    }
-
 }
 
 void scorer_free()
@@ -357,7 +315,7 @@ tScore scorer_score(tBoard *pBoard)
     {
         bool Player = board_index_player(pBoard, Index);
         uint64_t Data = IF Player THEN pBoard->Data ELSE ~pBoard->Data & BOARD_MASK;
-        tScore Score = scorer_lookup_longest_path(Data, Index);
+        tScore Score = BOARD_AREA_LONGEST_PATH(Data, Index);
 
         if (Player)
         {
@@ -372,17 +330,10 @@ tScore scorer_score(tBoard *pBoard)
     return ScoreX - ScoreO;
 }
 
-static tSize scorer_lookup_longest_path(uint64_t Data, tIndex Index)
-{
-    return (*area_lookup_longest_path[Index])(Data, Index);
-}
-
 static tSize area_3x4_lookup_longest_path(uint64_t Data, tIndex Index)
 {
-    uint16_t Contracted = Area3x4Contract[board_area_quadrant[Index]][(*contract_q[Index])(Data)];
-    tArea3x4Lookup *pLookup = &Area3x4Lookup[Contracted];
-    //tArea3x4Lookup *pLookup = &Area3x4Lookup[((*extract_q[Index])(Data))];
-    tArea3x4IndexLookup *pIndexLookup = &pLookup->Indices[board_area_index_c[Index]];
+    tArea3x4Lookup *pLookup = &Area3x4Lookup[AREA_3X4_ROTATE_Q(Data, Index)];
+    tArea3x4IndexLookup *pIndexLookup = &pLookup->Indices[AREA_3X4_INDEX(Index)];
     tSize MaxPathLength = 0;
 
     SET_IF_GREATER(pIndexLookup->LongestPath, MaxPathLength);
@@ -395,7 +346,7 @@ static tSize area_3x4_lookup_longest_path(uint64_t Data, tIndex Index)
     while (vector_iterator_has_next(&ExitsIterator))
     {
         tArea3x4PathLookup *pPathLookup = (tArea3x4PathLookup *) vector_iterator_next(&ExitsIterator);
-        tIndex NextIndex = (*board_area_exit_index_q[Index])(pPathLookup->Exit);
+        tIndex NextIndex = BOARD_AREA_EXIT_INDEX_Q(Index, pPathLookup->Exit);
 
         if (BitTest64(Data, NextIndex))
         {
@@ -407,9 +358,8 @@ static tSize area_3x4_lookup_longest_path(uint64_t Data, tIndex Index)
             while (vector_iterator_has_next(&PathsIterator))
             {
                 tArea3x4Path *pPath = (tArea3x4Path *) vector_iterator_next(&PathsIterator);
-                uint64_t PathConverted = Area3x4Expand[board_area_quadrant[Index]][pPath->Path];
-                //uint64_t PathConverted = (*convert_q[Index])(pPath->Path);
-                tSize LookupLength = pPath->Length + scorer_lookup_longest_path(Data & ~PathConverted, NextIndex);
+                uint64_t PathExpanded = AREA_3X4_EXPAND_Q(pPath->Path, Index);
+                tSize LookupLength = pPath->Length + BOARD_AREA_LONGEST_PATH(Data & ~PathExpanded, NextIndex);
 
                 SET_IF_GREATER(LookupLength, MaxPathLength);
             }
@@ -425,18 +375,18 @@ static tSize area_1x1_lookup_longest_path(uint64_t Data, tIndex Index)
 
     BitReset64(&Data, Index);
 
-    for (tIndex i = 0; i < AREA_1X1_EXITS; ++i)
+    for (tIndex Exit = 0; Exit < AREA_1X1_EXITS; ++Exit)
     {
-        tIndex NextIndex = (*board_area_exit_index_q[Index])(i);
+        tIndex NextIndex = BOARD_AREA_EXIT_INDEX_Q(Index, Exit);
 
         if (BitTest64(Data, NextIndex))
         {
-            tSize PathLength = scorer_lookup_longest_path(Data, NextIndex);
+            tSize PathLength = BOARD_AREA_LONGEST_PATH(Data, NextIndex);
             SET_IF_GREATER(PathLength, MaxPathLength);
         }
     }
 
-    return 1 + MaxPathLength;
+    return MaxPathLength + 1;
 }
 
 static tSize area_3x4_index_longest_path(uint16_t Data, tIndex Index)
@@ -601,204 +551,6 @@ Done:
     return PathFound;
 }
 
-static uint16_t extract_q1(uint64_t Data)
-{
-    uint16_t Q = 0U;
-
-    Q |= BitTest64(Data, 0)  << 0;
-    Q |= BitTest64(Data, 1)  << 1;
-    Q |= BitTest64(Data, 2)  << 2;
-    Q |= BitTest64(Data, 3)  << 3;
-    Q |= BitTest64(Data, 7)  << 4;
-    Q |= BitTest64(Data, 8)  << 5;
-    Q |= BitTest64(Data, 9)  << 6;
-    Q |= BitTest64(Data, 10) << 7;
-    Q |= BitTest64(Data, 14) << 8;
-    Q |= BitTest64(Data, 15) << 9;
-    Q |= BitTest64(Data, 16) << 10;
-    Q |= BitTest64(Data, 17) << 11;
-
-    return Q & AREA_3X4_MASK;
-}
-
-static uint16_t extract_q2(uint64_t Data)
-{
-    uint16_t Q = 0U;
-
-    Q |= BitTest64(Data, 6)  << 0;
-    Q |= BitTest64(Data, 13) << 1;
-    Q |= BitTest64(Data, 20) << 2;
-    Q |= BitTest64(Data, 27) << 3;
-    Q |= BitTest64(Data, 5)  << 4;
-    Q |= BitTest64(Data, 12) << 5;
-    Q |= BitTest64(Data, 19) << 6;
-    Q |= BitTest64(Data, 26) << 7;
-    Q |= BitTest64(Data, 4)  << 8;
-    Q |= BitTest64(Data, 11) << 9;
-    Q |= BitTest64(Data, 18) << 10;
-    Q |= BitTest64(Data, 25) << 11;
-
-    return Q & AREA_3X4_MASK;
-}
-
-static uint16_t extract_q3(uint64_t Data)
-{
-    uint16_t Q = 0U;
-
-    Q |= BitTest64(Data, 48) << 0;
-    Q |= BitTest64(Data, 47) << 1;
-    Q |= BitTest64(Data, 46) << 2;
-    Q |= BitTest64(Data, 45) << 3;
-    Q |= BitTest64(Data, 41) << 4;
-    Q |= BitTest64(Data, 40) << 5;
-    Q |= BitTest64(Data, 39) << 6;
-    Q |= BitTest64(Data, 38) << 7;
-    Q |= BitTest64(Data, 34) << 8;
-    Q |= BitTest64(Data, 33) << 9;
-    Q |= BitTest64(Data, 32) << 10;
-    Q |= BitTest64(Data, 31) << 11;
-
-    return Q & AREA_3X4_MASK;
-}
-
-static uint16_t extract_q4(uint64_t Data)
-{
-    uint16_t Q = 0U;
-
-    Q |= BitTest64(Data, 42) << 0;
-    Q |= BitTest64(Data, 35) << 1;
-    Q |= BitTest64(Data, 28) << 2;
-    Q |= BitTest64(Data, 21) << 3;
-    Q |= BitTest64(Data, 43) << 4;
-    Q |= BitTest64(Data, 36) << 5;
-    Q |= BitTest64(Data, 29) << 6;
-    Q |= BitTest64(Data, 22) << 7;
-    Q |= BitTest64(Data, 44) << 8;
-    Q |= BitTest64(Data, 37) << 9;
-    Q |= BitTest64(Data, 30) << 10;
-    Q |= BitTest64(Data, 23) << 11;
-
-    return Q & AREA_3X4_MASK;
-}
-
-static uint16_t contract_q1(uint64_t Data)
-{
-    uint64_t C = Data & AREA_Q1_MASK;
-
-    return (C >> 6 & AREA_3x4_MASK_08_11) 
-         | (C >> 3 & AREA_3x4_MASK_04_07)
-         | (C >> 0 & AREA_3x4_MASK_00_03);
-}
-
-static uint16_t contract_q2(uint64_t Data)
-{
-    uint64_t C = Data & AREA_Q2_MASK;
-
-    return (C >> 16 & AREA_3x4_MASK_09_11)
-         | (C >> 12 & AREA_3x4_MASK_06_08)
-         | (C >> 8  & AREA_3x4_MASK_03_05)
-         | (C >> 4  & AREA_3x4_MASK_00_02);
-}
-
-static uint16_t contract_q3(uint64_t Data)
-{
-    uint64_t C = Data & AREA_Q3_MASK;
-
-    return (C >> 37 & AREA_3x4_MASK_08_11)
-         | (C >> 34 & AREA_3x4_MASK_04_07)
-         | (C >> 31 & AREA_3x4_MASK_00_03);
-}
-
-static uint16_t contract_q4(uint64_t Data)
-{
-    uint64_t C = Data & AREA_Q4_MASK;
-
-    return (C >> 33 & AREA_3x4_MASK_09_11)
-         | (C >> 29 & AREA_3x4_MASK_06_08)
-         | (C >> 25 & AREA_3x4_MASK_03_05)
-         | (C >> 21 & AREA_3x4_MASK_00_02);
-}
-
-static uint64_t convert_q1(uint16_t Data)
-{
-    uint64_t C = 0ULL;
-
-    C |= (uint64_t) BitTest64(Data, 0)  << 0;
-    C |= (uint64_t) BitTest64(Data, 1)  << 1;
-    C |= (uint64_t) BitTest64(Data, 2)  << 2;
-    C |= (uint64_t) BitTest64(Data, 3)  << 3;
-    C |= (uint64_t) BitTest64(Data, 4)  << 7;
-    C |= (uint64_t) BitTest64(Data, 5)  << 8;
-    C |= (uint64_t) BitTest64(Data, 6)  << 9;
-    C |= (uint64_t) BitTest64(Data, 7)  << 10;
-    C |= (uint64_t) BitTest64(Data, 8)  << 14;
-    C |= (uint64_t) BitTest64(Data, 9)  << 15;
-    C |= (uint64_t) BitTest64(Data, 10) << 16;
-    C |= (uint64_t) BitTest64(Data, 11) << 17;
-
-    return C & BOARD_MASK;
-}
-
-static uint64_t convert_q2(uint16_t Data)
-{
-    uint64_t C = 0ULL;
-
-    C |= (uint64_t) BitTest64(Data, 0)  << 6;
-    C |= (uint64_t) BitTest64(Data, 1)  << 13;
-    C |= (uint64_t) BitTest64(Data, 2)  << 20;
-    C |= (uint64_t) BitTest64(Data, 3)  << 27;
-    C |= (uint64_t) BitTest64(Data, 4)  << 5;
-    C |= (uint64_t) BitTest64(Data, 5)  << 12;
-    C |= (uint64_t) BitTest64(Data, 6)  << 19;
-    C |= (uint64_t) BitTest64(Data, 7)  << 26;
-    C |= (uint64_t) BitTest64(Data, 8)  << 4;
-    C |= (uint64_t) BitTest64(Data, 9)  << 11;
-    C |= (uint64_t) BitTest64(Data, 10) << 18;
-    C |= (uint64_t) BitTest64(Data, 11) << 25;
-
-    return C & BOARD_MASK;
-}
-
-static uint64_t convert_q3(uint16_t Data)
-{
-    uint64_t C = 0ULL;
-
-    C |= (uint64_t) BitTest64(Data, 0)  << 48;
-    C |= (uint64_t) BitTest64(Data, 1)  << 47;
-    C |= (uint64_t) BitTest64(Data, 2)  << 46;
-    C |= (uint64_t) BitTest64(Data, 3)  << 45;
-    C |= (uint64_t) BitTest64(Data, 4)  << 41;
-    C |= (uint64_t) BitTest64(Data, 5)  << 40;
-    C |= (uint64_t) BitTest64(Data, 6)  << 39;
-    C |= (uint64_t) BitTest64(Data, 7)  << 38;
-    C |= (uint64_t) BitTest64(Data, 8)  << 34;
-    C |= (uint64_t) BitTest64(Data, 9)  << 33;
-    C |= (uint64_t) BitTest64(Data, 10) << 32;
-    C |= (uint64_t) BitTest64(Data, 11) << 31;
-
-    return C & BOARD_MASK;
-}
-
-static uint64_t convert_q4(uint16_t Data)
-{
-    uint64_t C = 0ULL;
-
-    C |= (uint64_t) BitTest64(Data, 0)  << 42;
-    C |= (uint64_t) BitTest64(Data, 1)  << 35;
-    C |= (uint64_t) BitTest64(Data, 2)  << 28;
-    C |= (uint64_t) BitTest64(Data, 3)  << 21;
-    C |= (uint64_t) BitTest64(Data, 4)  << 43;
-    C |= (uint64_t) BitTest64(Data, 5)  << 36;
-    C |= (uint64_t) BitTest64(Data, 6)  << 29;
-    C |= (uint64_t) BitTest64(Data, 7)  << 22;
-    C |= (uint64_t) BitTest64(Data, 8)  << 44;
-    C |= (uint64_t) BitTest64(Data, 9)  << 37;
-    C |= (uint64_t) BitTest64(Data, 10) << 30;
-    C |= (uint64_t) BitTest64(Data, 11) << 23;
-
-    return C & BOARD_MASK;
-}
-
 static tIndex board_area_exit_index_q0(tIndex Index)
 {
     return BoardAreaExitIndicesQ0[Index];
@@ -824,28 +576,120 @@ static tIndex board_area_exit_index_q4(tIndex Index)
     return BoardAreaExitIndicesQ4[Index];
 }
 
-static void area_3x4_print(uint16_t Data)
+static uint64_t area_3x4_expand_q1(uint16_t Data)
 {
-    for (tIndex i = 0; i < AREA_3X4_INDICES; ++i)
-    {
-        printf("[%c]", BitTest16(Data, i) ? 'X' : ' ');
-        if ((i + 1) % 4 == 0) printf("\n");
-    }
-    printf("\n");
+    uint64_t E = 0ULL;
+
+    E |= (uint64_t) BitTest64(Data, 0)  << 0;
+    E |= (uint64_t) BitTest64(Data, 1)  << 1;
+    E |= (uint64_t) BitTest64(Data, 2)  << 2;
+    E |= (uint64_t) BitTest64(Data, 3)  << 3;
+    E |= (uint64_t) BitTest64(Data, 4)  << 7;
+    E |= (uint64_t) BitTest64(Data, 5)  << 8;
+    E |= (uint64_t) BitTest64(Data, 6)  << 9;
+    E |= (uint64_t) BitTest64(Data, 7)  << 10;
+    E |= (uint64_t) BitTest64(Data, 8)  << 14;
+    E |= (uint64_t) BitTest64(Data, 9)  << 15;
+    E |= (uint64_t) BitTest64(Data, 10) << 16;
+    E |= (uint64_t) BitTest64(Data, 11) << 17;
+
+    return E & BOARD_MASK;
 }
 
-static void area_7x7_print(uint64_t Data)
+static uint64_t area_3x4_expand_q2(uint16_t Data)
 {
-    tBoard Board;
+    uint64_t E = 0ULL;
 
-    board_init(&Board);
+    E |= (uint64_t) BitTest64(Data, 0)  << 6;
+    E |= (uint64_t) BitTest64(Data, 1)  << 13;
+    E |= (uint64_t) BitTest64(Data, 2)  << 20;
+    E |= (uint64_t) BitTest64(Data, 3)  << 27;
+    E |= (uint64_t) BitTest64(Data, 4)  << 5;
+    E |= (uint64_t) BitTest64(Data, 5)  << 12;
+    E |= (uint64_t) BitTest64(Data, 6)  << 19;
+    E |= (uint64_t) BitTest64(Data, 7)  << 26;
+    E |= (uint64_t) BitTest64(Data, 8)  << 4;
+    E |= (uint64_t) BitTest64(Data, 9)  << 11;
+    E |= (uint64_t) BitTest64(Data, 10) << 18;
+    E |= (uint64_t) BitTest64(Data, 11) << 25;
 
-    Board.Data = Data;
-    Board.Empty = 0ULL;
+    return E & BOARD_MASK;
+}
 
-    char *Str = board_string(&Board);
+static uint64_t area_3x4_expand_q3(uint16_t Data)
+{
+    uint64_t E = 0ULL;
 
-    printf("%s\n\n", Str);
+    E |= (uint64_t) BitTest64(Data, 0)  << 48;
+    E |= (uint64_t) BitTest64(Data, 1)  << 47;
+    E |= (uint64_t) BitTest64(Data, 2)  << 46;
+    E |= (uint64_t) BitTest64(Data, 3)  << 45;
+    E |= (uint64_t) BitTest64(Data, 4)  << 41;
+    E |= (uint64_t) BitTest64(Data, 5)  << 40;
+    E |= (uint64_t) BitTest64(Data, 6)  << 39;
+    E |= (uint64_t) BitTest64(Data, 7)  << 38;
+    E |= (uint64_t) BitTest64(Data, 8)  << 34;
+    E |= (uint64_t) BitTest64(Data, 9)  << 33;
+    E |= (uint64_t) BitTest64(Data, 10) << 32;
+    E |= (uint64_t) BitTest64(Data, 11) << 31;
 
-    free(Str);
+    return E & BOARD_MASK;
+}
+
+static uint64_t area_3x4_expand_q4(uint16_t Data)
+{
+    uint64_t E = 0ULL;
+
+    E |= (uint64_t) BitTest64(Data, 0)  << 42;
+    E |= (uint64_t) BitTest64(Data, 1)  << 35;
+    E |= (uint64_t) BitTest64(Data, 2)  << 28;
+    E |= (uint64_t) BitTest64(Data, 3)  << 21;
+    E |= (uint64_t) BitTest64(Data, 4)  << 43;
+    E |= (uint64_t) BitTest64(Data, 5)  << 36;
+    E |= (uint64_t) BitTest64(Data, 6)  << 29;
+    E |= (uint64_t) BitTest64(Data, 7)  << 22;
+    E |= (uint64_t) BitTest64(Data, 8)  << 44;
+    E |= (uint64_t) BitTest64(Data, 9)  << 37;
+    E |= (uint64_t) BitTest64(Data, 10) << 30;
+    E |= (uint64_t) BitTest64(Data, 11) << 23;
+
+    return E & BOARD_MASK;
+}
+
+static uint16_t area_3x4_contract_q1(uint64_t Data)
+{
+    uint64_t C = Data & BOARD_Q1_MASK;
+
+    return (C >> 6 & AREA_3x4_MASK_08_11) 
+         | (C >> 3 & AREA_3x4_MASK_04_07)
+         | (C >> 0 & AREA_3x4_MASK_00_03);
+}
+
+static uint16_t area_3x4_contract_q2(uint64_t Data)
+{
+    uint64_t C = Data & BOARD_Q2_MASK;
+
+    return (C >> 16 & AREA_3x4_MASK_09_11)
+         | (C >> 12 & AREA_3x4_MASK_06_08)
+         | (C >> 8  & AREA_3x4_MASK_03_05)
+         | (C >> 4  & AREA_3x4_MASK_00_02);
+}
+
+static uint16_t area_3x4_contract_q3(uint64_t Data)
+{
+    uint64_t C = Data & BOARD_Q3_MASK;
+
+    return (C >> 37 & AREA_3x4_MASK_08_11)
+         | (C >> 34 & AREA_3x4_MASK_04_07)
+         | (C >> 31 & AREA_3x4_MASK_00_03);
+}
+
+static uint16_t area_3x4_contract_q4(uint64_t Data)
+{
+    uint64_t C = Data & BOARD_Q4_MASK;
+
+    return (C >> 33 & AREA_3x4_MASK_09_11)
+         | (C >> 29 & AREA_3x4_MASK_06_08)
+         | (C >> 25 & AREA_3x4_MASK_03_05)
+         | (C >> 21 & AREA_3x4_MASK_00_02);
 }

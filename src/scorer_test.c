@@ -1,6 +1,7 @@
 /*
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 
 #include "bitutil.h"
 #include "board.h"
@@ -9,80 +10,18 @@
 #include "scorer.h"
 #include "util.h"
 
+static double time_diff_ms(struct timespec *pBegin, struct timespec *pEnd);
+
 int main(void)
 {
-    bool array1[ROWS*COLUMNS] = {
-        1, 1, 1, 1, 0, 0, 0,
-        1, 1, 1, 1, 0, 0, 0,
-        1, 1, 1, 1, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 0,
-    };
-
-    bool array2[ROWS*COLUMNS] = {
-        0, 0, 0, 0, 1, 1, 1,
-        0, 0, 0, 0, 1, 1, 1,
-        0, 0, 0, 0, 1, 1, 1,
-        0, 0, 0, 0, 1, 1, 1,
-        0, 0, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 0,
-    };
-
-    bool array3[ROWS*COLUMNS] = {
-        0, 0, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 0,
-        0, 0, 0, 1, 1, 1, 1,
-        0, 0, 0, 1, 1, 1, 1,
-        0, 0, 0, 1, 1, 1, 1,
-    };
-
-    bool array4[ROWS*COLUMNS] = {
-        0, 0, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 0,
-        1, 1, 1, 0, 0, 0, 0,
-        1, 1, 1, 0, 0, 0, 0,
-        1, 1, 1, 0, 0, 0, 0,
-        1, 1, 1, 0, 0, 0, 0,
-    };
-
-    uint64_t q1_mask = 0ULL;
-    for (int i = 0; i < ROWS*COLUMNS; ++i) {
-        if (array1[i]) BitSet64(&q1_mask, i);
-    }
-    printf("q1_mask: 0x%016I64XULL\n", q1_mask);
-
-    uint64_t q2_mask = 0ULL;
-    for (int i = 0; i < ROWS*COLUMNS; ++i) {
-        if (array2[i]) BitSet64(&q2_mask, i);
-    }
-    printf("q2_mask: 0x%016I64XULL\n", q2_mask);
-
-    uint64_t q3_mask = 0ULL;
-    for (int i = 0; i < ROWS*COLUMNS; ++i) {
-        if (array3[i]) BitSet64(&q3_mask, i);
-    }
-    printf("q3_mask: 0x%016I64XULL\n", q3_mask);
-
-    uint64_t q4_mask = 0ULL;
-    for (int i = 0; i < ROWS*COLUMNS; ++i) {
-        if (array4[i]) BitSet64(&q4_mask, i);
-    }
-    printf("q4_mask: 0x%016I64XULL\n", q4_mask);
-
     tRulesConfig RulesConfig;
     tRules Rules;
     tRandom Random;
     tBoard Board;
 
-    printf("Initializing scorer lookup\n");
+    printf("initializing scorer lookup\n");
     scorer_init();
-    printf("Initialized scorer lookup\n");
+    printf("initialized scorer lookup\n");
 
     rules_config_init(&RulesConfig);
 
@@ -94,7 +33,7 @@ int main(void)
     int Simulations = 100000;
     int Failures = 0;
 
-    printf("Starting simulations\n");
+    printf("starting simulations\n");
 
     for (int i = 0; i < Simulations; ++i)
     {
@@ -121,10 +60,76 @@ int main(void)
 
     printf("simulations: %d, failures: %d\n", Simulations, Failures);
 
-    printf("Freeing scorer lookup\n");
+    printf("starting benchmarks\n");
+
+    printf("BOARD SCORE\n");
+
+    struct timespec Begin1, End1;
+    clock_gettime(CLOCK_REALTIME, &Begin1);
+
+    for (int i = 0; i < Simulations; ++i)
+    {
+        board_init(&Board);
+        rules_simulate_playout(&Rules, &Board, &Random, true);
+        board_score(&Board);
+    }
+
+    clock_gettime(CLOCK_REALTIME, &End1);
+    printf("simulations: %d, time elapsed: %.3lf ms\n", Simulations, time_diff_ms(&Begin1, &End1));
+
+    printf("SCORER SCORE\n");
+
+    struct timespec Begin2, End2;
+    clock_gettime(CLOCK_REALTIME, &Begin2);
+
+    for (int i = 0; i < Simulations; ++i)
+    {
+        board_init(&Board);
+        rules_simulate_playout(&Rules, &Board, &Random, true);
+        scorer_score(&Board);
+    }
+
+    clock_gettime(CLOCK_REALTIME, &End2);
+    printf("simulations: %d, time elapsed: %.3lf ms\n", Simulations, time_diff_ms(&Begin2, &End2));
+
+
+    printf("freeing scorer lookup\n");
     scorer_free();
-    printf("Freed scorer lookup\n");
+    printf("freed scorer lookup\n");
 
     return 0;
+}
+
+static double time_diff_ms(struct timespec *pBegin, struct timespec *pEnd)
+{
+    return (pEnd->tv_sec * 1.0e3 + pEnd->tv_nsec / 1.0e6) - (pBegin->tv_sec * 1.0e3 + pBegin->tv_nsec / 1.0e6);
+}
+*/
+
+/*
+static void area_3x4_print(uint16_t Data)
+{
+    for (tIndex i = 0; i < AREA_3X4_INDICES; ++i)
+    {
+        printf("[%c]", BitTest16(Data, i) ? 'X' : ' ');
+        if ((i + 1) % 4 == 0) printf("\n");
+    }
+    printf("\n");
+}
+
+static void area_7x7_print(uint64_t Data)
+{
+    tBoard Board;
+
+    board_init(&Board);
+
+    Board.Data = Data;
+    Board.Empty = 0ULL;
+
+    char *Str = board_string(&Board);
+
+    printf("%s\n\n", Str);
+
+    free(Str);
 }
 */

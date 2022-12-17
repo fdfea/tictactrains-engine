@@ -373,16 +373,19 @@ static tSize board_index_longest_path(uint64_t Data, tIndex Index)
         PathLength = board_index_longest_path(Data, LEFT(Index));
         SET_IF_GREATER(PathLength, MaxPathLength);
     }
+
     if (RIGHT_VALID(Index) AND BitTest64(Data, RIGHT(Index)))
     {
         PathLength = board_index_longest_path(Data, RIGHT(Index));
         SET_IF_GREATER(PathLength, MaxPathLength);
     }
+
     if (TOP_VALID(Index) AND BitTest64(Data, TOP(Index)))
     {
         PathLength = board_index_longest_path(Data, TOP(Index));
         SET_IF_GREATER(PathLength, MaxPathLength);
     }
+    
     if (BOTTOM_VALID(Index) AND BitTest64(Data, BOTTOM(Index)))
     {
         PathLength = board_index_longest_path(Data, BOTTOM(Index));

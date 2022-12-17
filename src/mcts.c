@@ -3,7 +3,10 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+
+#ifdef TIMED
 #include <time.h>
+#endif
 
 #include "board.h"
 #include "debug.h"

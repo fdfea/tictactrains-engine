@@ -18,7 +18,7 @@ tVector;
 
 typedef struct VectorIterator
 {
-    void **ppCurrent, **ppEnd;
+    void **ppCurrent, *pEnd;
 }
 tVectorIterator;
 

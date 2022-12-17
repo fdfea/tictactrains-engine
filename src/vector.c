@@ -235,12 +235,12 @@ void vector_iterator_init(tVectorIterator *pIterator, tVector* pVector)
     void **ppBegin = pVector->ppItems;
 
     pIterator->ppCurrent = ppBegin;
-    pIterator->ppEnd = ppBegin + vector_size(pVector) * sizeof(void *);
+    pIterator->pEnd = (char *) ppBegin + vector_size(pVector) * sizeof(void *);
 }
 
 bool vector_iterator_has_next(tVectorIterator *pIterator)
 {
-    return pIterator->ppCurrent < pIterator->ppEnd;
+    return (void *) pIterator->ppCurrent < pIterator->pEnd;
 }
 
 void *vector_iterator_next(tVectorIterator *pIterator)
