@@ -10,6 +10,7 @@
 #include "vector.h"
 
 #include <stdio.h>
+#include <string.h>
 
 static void area_3x4_print(uint16_t Data);
 static void area_7x7_print(uint64_t Data);
@@ -42,7 +43,7 @@ int TotalPaths = 0;
 
 typedef struct Area3x4Path
 {
-    uint64_t Path;
+    uint64_t Path; //might be able to change this to uint16_t
     tSize Length;
 }
 tArea3x4Path;
@@ -196,6 +197,12 @@ static const uint16_t (*area_3x4_contract_q[ROWS*COLUMNS])(uint64_t) = {
 #define AREA_3X4_EXPAND_Q(Data, Index)      (Area3x4ExpansionLookup[AREA_3X4_QUADRANT(Index)][Data])
 #define AREA_3X4_ROTATE_Q(Data, Index)      (Area3x4RotationLookup[AREA_3X4_QUADRANT(Index)][(*area_3x4_contract_q[Index])(Data)])
 
+static bool area_3x4_exit_adjacent(int Start, int End);
+static tSize area_3x4_exits_open(uint16_t Data, uint16_t Path);
+static tSize area_3x4_longest_exit_path(uint16_t Data);
+static bool area_3x4_subpath(uint16_t Data, uint16_t Path);
+static bool area_3x4_subpath_has_longer_through_path(uint16_t Area, uint16_t Path, uint16_t SubPath);
+
 void scorer_init()
 {
     for (uint16_t Data = 0U; Data < AREA_3X4_LOOKUP_SIZE; ++Data)
@@ -227,7 +234,7 @@ void scorer_init()
                         tArea3x4PathLookup *pPathLookup = emalloc(sizeof(tArea3x4PathLookup));
 
                         vector_init(&pPathLookup->Paths);
-                        area_3x4_get_lookup_paths(Area, Start, End, 0U, &pPathLookup->Paths, Length);
+                        area_3x4_get_lookup_paths(Area, Start, End, 0U, &pPathLookup->Paths, Path);
 
                         pPathLookup->Exit = Exit;
 
@@ -261,9 +268,8 @@ void scorer_init()
 
                         vector_add(&pIndexLookup->Exits, (void *) pPathLookup);
 
-                        // filter paths here
-                        if (vector_size(&pPathLookup->Paths) > 1)
-                        //if (Start == 8 AND End == 10 && Data == 0b010111011111)
+                        /*
+                        if (Area == 0b111011000100 AND Start == 9 AND End == 7 AND Exit == 1)
                         {
                             printf("=========== start: %d, exit: %d, end: %d, max length: %d ===========\n", Start, Exit, End, Length);
                             printf("DATA\n");
@@ -283,38 +289,278 @@ void scorer_init()
                                 area_3x4_print(pPath->Path);
                             }
                         }
+                        */
 
-                        //filter rules ideas
-                        //  if path has a "hole", e.g. 000100110010 for 001101110011
+                        // start crazy stuff
 
-                        // if square not used in path and non-exit square and no path to exit and another path uses square, don't need that path
-                        
-                        // if previously computed already contains path don't need it???
+                        // for all paths with same length, only keep one with most open exits and best 2nd length
+                        typedef struct PathElement
+                        {
+                            uint16_t Path;
+                        }
+                        tPathElement;
 
-                        // if all paths don't use a square, then don't need to check it for through-paths
-                        // and all squares of all paths, diff it from data, check for through-paths against that
+                        tVector PathLengthsTable[13] = { 0 };
 
-                        // keep track of available through-path length (ATPL)?
-                        // if there is a path with greater or equal length and current path does not have greater through-path available
-                        //   discard current path?
+                        for (int i = 0; i < 13; ++i)
+                        {
+                            vector_init(&PathLengthsTable[i]);
+                        }
 
-                        // keep max path (MaxP) and all paths where path length (PL) + ATPL >= MaxPL
-                        //  can there be multiple through-paths? compare to min ATPL or max ATPL?
-                        //  can we assume there is no scenario where you need to go through more than twice because of 3x4 area
-                        //  may needn to consider if one through-path covers another through-path
-                        //    only need paths that maximize something?
-                        // may need to distinguish between end-path and through-path
-                        // consider if through-path allows more exits?
-
-                        /*
                         for (tIndex Index = vector_size(&pPathLookup->Paths); Index > 0; --Index)
                         {
                             tArea3x4Path *pPath = vector_get(&pPathLookup->Paths, Index - 1);
 
-                            if (NOT area_3x4_has_through_path(Used & ~pPath->Path))
+                            tPathElement *pElement = emalloc(sizeof(tPathElement));
+                            pElement->Path = (uint16_t) pPath->Path;
+
+                            if (pPath->Length > 12)
                             {
-                                vector_take(&pPathLookup->Paths, Index - 1);
-                                free(pPath);
+                                printf("bad path length\n");
+                                exit(1);
+                            }
+
+                            vector_add(&PathLengthsTable[pPath->Length], pElement);
+                        }
+
+                        /*
+                        printf("PATH LENGTHS TABLE\n");
+                        for (int i = 0; i < AREA_3X4_INDICES; ++i)
+                        {
+                            tVector *pVector = &PathLengthsTable[i];
+
+                            if (vector_size(pVector) > 1)
+                            {
+                                printf("LENGTH: %d\n", i);
+                                printf("AREA\n");
+                                area_3x4_print(Area);
+
+                                for (int j = 0; j < vector_size(pVector); j++)
+                                {
+                                    tPathElement *pElement = (tPathElement *) vector_get(pVector, j);
+                                    printf("PATH\n");
+                                    area_3x4_print(pElement->Path);
+                                }
+                            }
+                        }
+                        */
+
+                        for (int i = 0; i < 13; ++i)
+                        {
+                            tVector *pVector = &PathLengthsTable[i];
+
+                            if (vector_size(pVector) > 1)
+                            {
+                                //printf("found one greater than 1\n");
+
+                                tVector BestElements;
+                                vector_init(&BestElements);
+
+                                int MaxExitsOpen = -1;
+                                int MaxSecPathLen = -1;
+                                //tPathElement *pBest = NULL;
+
+                                // if amount of exits is the same, may need to check for longest end-path / through-path
+                                for (int k = 0; k < vector_size(pVector); ++k)
+                                {
+                                    //don't want least exit path, but path with maximal secondary path?
+                                    tPathElement *pElement = (tPathElement *) vector_get(pVector, k);
+                                    int ExitsOpen = area_3x4_exits_open(Area, pElement->Path);
+                                    int SecPathLen = area_3x4_longest_exit_path(Area & ~pElement->Path);
+
+                                    if (SecPathLen == MaxSecPathLen)
+                                    {
+                                        if (ExitsOpen == MaxExitsOpen)
+                                        {
+                                            vector_add(&BestElements, pElement);
+                                        }
+                                        // this added 3 paths lol
+                                        else if (ExitsOpen > MaxExitsOpen)
+                                        {
+                                            for (int w = vector_size(&BestElements); w > 0; --w)
+                                            {
+                                                vector_take(&BestElements, w - 1);
+                                            }
+
+                                            vector_add(&BestElements, pElement);
+                                            MaxSecPathLen = SecPathLen;
+                                            MaxExitsOpen = ExitsOpen;
+                                        }
+                                    }
+                                    else
+                                    {
+                                        if (SecPathLen > MaxSecPathLen)
+                                        {
+                                            for (int w = vector_size(&BestElements); w > 0; --w)
+                                            {
+                                                vector_take(&BestElements, w - 1);
+                                            }
+
+                                            vector_add(&BestElements, pElement);
+                                            MaxSecPathLen = SecPathLen;
+                                            MaxExitsOpen = ExitsOpen;
+                                        }
+                                    }
+                                }
+
+                                if (vector_size(&BestElements) == 0 OR /*MaxExitsOpen*/ MaxSecPathLen < 0)
+                                {
+                                    printf("something bad happened\n");
+                                    exit(1);
+                                }
+
+                                for (int j = 0; j < vector_size(pVector); ++j)
+                                {
+                                    tPathElement *pElement = (tPathElement *) vector_get(pVector, j);
+
+                                    if (BitPopCount16(pElement->Path) != i)
+                                    {
+                                        printf("bad length\n");
+                                        exit(1);
+                                    }
+
+                                    bool OneOfBest = false;
+                                    for (int g = 0; g < vector_size(&BestElements); ++g)
+                                    {
+                                        tPathElement *pEE = vector_get(&BestElements, g);
+
+                                        if (pEE->Path == pElement->Path)
+                                        {
+                                            OneOfBest = true;
+                                            break;
+                                        }
+                                    }
+
+                                    if (NOT OneOfBest)
+                                    {
+                                        for (int k = vector_size(&pPathLookup->Paths); k > 0; --k)
+                                        {
+                                            tArea3x4Path *pPath = vector_get(&pPathLookup->Paths, k - 1);
+
+                                            if (pPath->Length == i AND pPath->Path == pElement->Path)
+                                            {
+                                                //printf("taking stuff\n");
+                                                vector_take(&pPathLookup->Paths, k - 1);
+                                                free(pPath);
+                                                break;
+                                            }
+                                        }
+                                    }
+                                }
+
+                                vector_free(&BestElements);
+                            }
+                        }
+
+                        /*
+                        if (Area == 0b111011000100 AND Start == 9 AND End == 7 AND Exit == 1)
+                        {
+                            printf("=========== start: %d, exit: %d, end: %d, max length: %d ===========\n", Start, Exit, End, Length);
+                            printf("DATA\n");
+                            area_3x4_print(Data);
+                            //printf("USED\n");
+                            //area_3x4_print(Used);
+                            printf("FOUND PATHS: %d\n", vector_size(&pPathLookup->Paths));
+                            vector_iterator_init(&PathsIterator, &pPathLookup->Paths);
+                            while (vector_iterator_has_next(&PathsIterator))
+                            {
+                                tArea3x4Path *pPath = vector_iterator_next(&PathsIterator);
+                                if (NOT BitEmpty16(pPath->Path & ~Data))
+                                {
+                                    printf("bad path!!!\n");
+                                }
+                                printf("length: %d, path:\n", pPath->Length);
+                                area_3x4_print(pPath->Path);
+                            }
+                        }
+                        */
+
+                        // if a shorter path is a subpath of a longer path and longer path has same exit count, don't need shorter path?
+                        tVector PathsToDelete;
+                        vector_init(&PathsToDelete);
+
+                        // also need to make sure potential through-path length isn't smaller
+                        // longer path length >= sub path + longest secondary path
+                        for (int c = 0; c < vector_size(&pPathLookup->Paths); ++c)
+                        {
+                            tArea3x4Path *pSubPath = vector_get(&pPathLookup->Paths, c);
+                            tSize SubExitCount = area_3x4_exits_open(Area, pSubPath->Path);
+                            tSize SubPathLen = BitPopCount16(pSubPath->Path);
+                            tSize SecSubPathLen = area_3x4_longest_exit_path(Area & ~pSubPath->Path);
+
+                            for (int d = 0; d < vector_size(&pPathLookup->Paths); ++d)
+                            {
+                                tArea3x4Path *pPath = vector_get(&pPathLookup->Paths, d);
+                                tSize ExitCount = area_3x4_exits_open(Area, pPath->Path);
+                                tSize PathLen = BitPopCount16(pPath->Path);
+                                tSize SecPathLen = area_3x4_longest_exit_path(Area & ~pPath->Path);
+
+                                // also need to check all through paths to make sure they don't get smaller?
+
+                                // AND DOES NOT HAVE LONGER THROUGH PATH FOR GIVEN ENTRY/EXIT
+
+                                if (area_3x4_subpath(pPath->Path, pSubPath->Path)
+                                    AND ExitCount >= SubExitCount
+                                    AND PathLen + SecPathLen >= SubPathLen + SecSubPathLen
+                                    AND NOT area_3x4_subpath_has_longer_through_path(Area, pPath->Path, pSubPath->Path))
+                                {
+                                    //printf("adding path to delete\n");
+                                    vector_add(&PathsToDelete, pSubPath);
+                                }
+                            }
+                        }
+
+                        for (int m = 0; m < vector_size(&PathsToDelete); ++m)
+                        {
+                            tArea3x4Path *pSubPath = vector_get(&PathsToDelete, m);
+
+                            for (int k = vector_size(&pPathLookup->Paths); k > 0; --k)
+                            {
+                                tArea3x4Path *pPath = vector_get(&pPathLookup->Paths, k - 1);
+
+                                if (pSubPath->Path == pPath->Path)
+                                {
+                                    vector_take(&pPathLookup->Paths, k - 1);
+                                    free(pPath);
+                                    break;
+                                }
+                            }
+                        }
+
+                        vector_free(&PathsToDelete);
+
+                        for (int i = 0; i < 13; ++i)
+                        {
+                            tVector *pVector = &PathLengthsTable[i];
+
+                            for (int k = 0; k < vector_size(pVector); ++k)
+                            {
+                                tPathElement *pElement = (tPathElement *) vector_get(pVector, k);
+                                free(pElement);
+                            }
+
+                            vector_free(pVector);
+                        }
+
+                        /*
+                        if (Area == 0b111011000100 AND Start == 9 AND End == 7 AND Exit == 1)
+                        {
+                            printf("=========== start: %d, exit: %d, end: %d, max length: %d ===========\n", Start, Exit, End, Length);
+                            printf("DATA\n");
+                            area_3x4_print(Data);
+                            //printf("USED\n");
+                            //area_3x4_print(Used);
+                            printf("FOUND PATHS: %d\n", vector_size(&pPathLookup->Paths));
+                            vector_iterator_init(&PathsIterator, &pPathLookup->Paths);
+                            while (vector_iterator_has_next(&PathsIterator))
+                            {
+                                tArea3x4Path *pPath = vector_iterator_next(&PathsIterator);
+                                if (NOT BitEmpty16(pPath->Path & ~Data))
+                                {
+                                    printf("bad path!!!\n");
+                                }
+                                printf("length: %d, path:\n", pPath->Length);
+                                area_3x4_print(pPath->Path);
                             }
                         }
                         */
@@ -563,12 +809,12 @@ Done:
 
 // you already know a path exists before calling this
 // traverses all paths but only keeps those with a "through-path"
-void area_3x4_get_lookup_paths(uint16_t Data, tIndex Start, tIndex End, uint16_t Path, tVector *pPaths, tSize MaxLength)
+void area_3x4_get_lookup_paths(uint16_t Data, tIndex Start, tIndex End, uint16_t Path, tVector *pPaths, uint16_t MaxPath)
 {
     BitSet16(&Path, Start);
     BitReset16(&Data, Start);
 
-    if (Start == End AND area_3x4_has_through_path(Data & ~Path, Path, MaxLength))
+    if (Start == End AND area_3x4_has_through_path(Data & ~Path, Path, MaxPath))
     {
         tArea3x4Path *pPath = emalloc(sizeof(tArea3x4Path));
 
@@ -580,10 +826,10 @@ void area_3x4_get_lookup_paths(uint16_t Data, tIndex Start, tIndex End, uint16_t
         return;
     }
 
-    if (LEFT_VALID(Start) AND BitTest16(Data, LEFT(Start))) area_3x4_get_lookup_paths(Data, LEFT(Start), End, Path, pPaths, MaxLength);
-    if (RIGHT_VALID(Start) AND BitTest16(Data, RIGHT(Start))) area_3x4_get_lookup_paths(Data, RIGHT(Start), End, Path, pPaths, MaxLength);
-    if (TOP_VALID(Start) AND BitTest16(Data, TOP(Start))) area_3x4_get_lookup_paths(Data, TOP(Start), End, Path, pPaths, MaxLength);
-    if (BOTTOM_VALID(Start) AND BitTest16(Data, BOTTOM(Start))) area_3x4_get_lookup_paths(Data, BOTTOM(Start), End, Path, pPaths, MaxLength);
+    if (LEFT_VALID(Start) AND BitTest16(Data, LEFT(Start))) area_3x4_get_lookup_paths(Data, LEFT(Start), End, Path, pPaths, MaxPath);
+    if (RIGHT_VALID(Start) AND BitTest16(Data, RIGHT(Start))) area_3x4_get_lookup_paths(Data, RIGHT(Start), End, Path, pPaths, MaxPath);
+    if (TOP_VALID(Start) AND BitTest16(Data, TOP(Start))) area_3x4_get_lookup_paths(Data, TOP(Start), End, Path, pPaths, MaxPath);
+    if (BOTTOM_VALID(Start) AND BitTest16(Data, BOTTOM(Start))) area_3x4_get_lookup_paths(Data, BOTTOM(Start), End, Path, pPaths, MaxPath);
 }
 
 // pass in start data here and check for blocking through-path?
@@ -611,13 +857,14 @@ bool area_3x4_has_through_path(uint16_t Data)
 }
 */
 
-bool area_3x4_has_through_path(uint16_t Data, uint16_t PrimaryPath, tSize MaxLength)
+bool area_3x4_has_through_path(uint16_t Data, uint16_t PrimaryPath, uint16_t MaxPath)
 {
     bool PathFound = false;
 
     // only consider squares that touch original data
 
     // find true through-paths
+    // non-adjacent
     for (tIndex StartExit = 0; StartExit < AREA_3X4_EXITS; ++StartExit)
     {
         for (tIndex EndExit = 0; EndExit < AREA_3X4_EXITS; ++EndExit)
@@ -626,7 +873,10 @@ bool area_3x4_has_through_path(uint16_t Data, uint16_t PrimaryPath, tSize MaxLen
             {
                 tIndex Start = AREA_3X4_EXIT_INDEX(StartExit), End = AREA_3X4_EXIT_INDEX(EndExit);
 
-                if (BitTest16(Data, Start) AND BitTest16(Data, End) AND area_3x4_has_path(Data, Start, End))
+                if (BitTest16(Data, Start)
+                    AND BitTest16(Data, End)
+                    AND NOT area_3x4_exit_adjacent(StartExit, EndExit)
+                    AND area_3x4_has_path(Data, Start, End))
                 {
                     PathFound = true;
                     goto Done;
@@ -635,7 +885,10 @@ bool area_3x4_has_through_path(uint16_t Data, uint16_t PrimaryPath, tSize MaxLen
         }
     }
 
+    uint16_t Original = Data | PrimaryPath;
     tSize PrimaryPathLength = BitPopCount16(PrimaryPath);
+    tSize MaxLength = BitPopCount16(MaxPath);
+    tSize MaxPathExitsOpen = area_3x4_exits_open(Original, MaxPath);
 
     // find viable end-paths
     for (tIndex StartExit = 0; StartExit < AREA_3X4_EXITS; ++StartExit)
@@ -650,7 +903,8 @@ bool area_3x4_has_through_path(uint16_t Data, uint16_t PrimaryPath, tSize MaxLen
             if (BitTest16(Data, Start)
                 AND BitTest16(Data, End)
                 AND area_3x4_longest_path(Data, Start, End, &Length, &SecondaryPath)
-                AND PrimaryPathLength + Length > MaxLength)
+                AND PrimaryPathLength + Length > MaxLength
+                AND area_3x4_exits_open(Original, PrimaryPath) >= MaxPathExitsOpen)
             {
                 //printf("DATA\n");
                 //area_3x4_print(PrimaryPath | Data);
@@ -664,8 +918,98 @@ bool area_3x4_has_through_path(uint16_t Data, uint16_t PrimaryPath, tSize MaxLen
         }
     }
 
+    // only keep paths with longest through-paths
+    // only keep non-adjacent through-paths
+
+    // only need through-paths / end-paths that open more exits??
+
 Done:
     return PathFound;
+}
+
+// args need to be signed
+static bool area_3x4_exit_adjacent(int Start, int End)
+{
+    return ((Start <= 2 AND End <= 2) OR (Start >= 3 AND End >= 3)); //OR (Start == 2 AND End == 6) OR (Start == 6 AND End == 2);
+}
+
+static tSize area_3x4_exits_open(uint16_t Data, uint16_t Path)
+{
+    tSize Count = 0;
+
+    for (tIndex Exit = 0; Exit < AREA_3X4_EXITS; ++Exit)
+    {
+        tIndex Index = Area3x4ExitIndexLookup[Exit];
+
+        if (BitTest16(Data, Index) AND NOT BitTest16(Path, Index))
+        {
+            Count++;
+        }
+    }
+
+    return Count;
+}
+
+// calculate longest exitable path?
+static tSize area_3x4_longest_exit_path(uint16_t Data)
+{
+    tSize PathLength, MaxPathLength = 0;
+
+    for (tIndex Exit = 0; Exit < AREA_3X4_EXITS; ++Exit)
+    {
+        tIndex Index = AREA_3X4_EXIT_INDEX(Exit);
+
+        if (BitTest16(Data, Index)) // adding this if statement adds 1 path hahaha
+        {
+            PathLength = area_3x4_index_longest_path(Data, Index);
+            SET_IF_GREATER(PathLength, MaxPathLength);
+        }
+    }
+
+    return MaxPathLength;
+}
+
+static bool area_3x4_subpath(uint16_t Data, uint16_t Path)
+{
+    return BitPopCount16(Data) > BitPopCount16(Path) AND BitEmpty16(Path & ~Data);
+}
+
+static bool area_3x4_subpath_has_longer_through_path(uint16_t Area, uint16_t Path, uint16_t SubPath)
+{
+    bool HasLonger = false;
+
+    uint16_t SecArea = Area & ~Path, SecSubArea = Area & ~SubPath;
+
+    for (tIndex StartExit = 0; StartExit < AREA_3X4_EXITS; ++StartExit)
+    {
+        for (tIndex EndExit = 0; EndExit < AREA_3X4_EXITS; ++EndExit)
+        {
+            if (StartExit != EndExit)
+            {
+                tIndex Start = AREA_3X4_EXIT_INDEX(StartExit), End = AREA_3X4_EXIT_INDEX(EndExit);
+
+                uint16_t SecPath = 0U, SubSecPath = 0U;
+                tSize SecPathLen = 0U, SubSecPathLen = 0U;
+                
+                bool SecHas = area_3x4_longest_path(SecArea, Start, End, &SecPathLen, &SecPath);
+                bool SubSecHas = area_3x4_longest_path(SecSubArea, Start, End, &SubSecPathLen, &SubSecPath);
+
+                if (SecHas AND NOT SubSecHas)
+                {
+                    printf("something weird happened... subpath_has_longer_through_path\n");
+                    exit(1);
+                }
+
+                if (SecHas AND SubSecHas AND SubSecPathLen > SecPathLen)
+                {
+                    HasLonger = true;
+                    break;
+                }
+            }
+        }
+    }
+
+    return HasLonger;
 }
 
 void area_3x4_area(uint16_t Data, tIndex Index, uint16_t *pArea)

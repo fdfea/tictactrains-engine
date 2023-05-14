@@ -12,6 +12,9 @@
 
 #include "vector.h"
 
+//upgrade gcc version?
+//try using -Ofast?
+
 #define AREA_3X4_INDICES 12
 #define AREA_3X4_EXITS 7
 
@@ -44,10 +47,6 @@ typedef struct Area3x4Lookup
     tArea3x4IndexLookup Indices[AREA_3X4_INDICES];
 }
 tArea3x4Lookup;
-
-static const tIndex Area3x4ExitIndexLookup[AREA_3X4_EXITS] = { 3, 7, 11, 8, 9, 10, 11 };
-
-#define AREA_3X4_EXIT_INDEX(i)      (Area3x4ExitIndexLookup[i])
 
 static double time_diff_ms(struct timespec *pBegin, struct timespec *pEnd);
 static void area_3x4_print(uint16_t Data);
@@ -201,7 +200,8 @@ int main(void)
     printf("initialized scorer lookup\n");
 
     printf("TOTAL PATHS: %d\n", TotalPaths);
-    //exit(0);
+
+    //goto Done;
 
     rules_config_init(&RulesConfig);
 
@@ -238,6 +238,8 @@ int main(void)
         }
     }
 
+    goto Done;
+
     printf("simulations: %d, failures: %d\n", Simulations, Failures);
 
     printf("starting benchmarks\n");
@@ -272,6 +274,7 @@ int main(void)
     clock_gettime(CLOCK_REALTIME, &End2);
     printf("simulations: %d, time elapsed: %.3lf ms\n", Simulations, time_diff_ms(&Begin2, &End2));
 
+Done:
     printf("freeing scorer lookup\n");
     scorer_free();
     printf("freed scorer lookup\n");
