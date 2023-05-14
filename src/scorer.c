@@ -9,6 +9,13 @@
 #include "util.h"
 #include "vector.h"
 
+#include <stdio.h>
+
+static void area_3x4_print(uint16_t Data);
+static void area_7x7_print(uint64_t Data);
+
+int TotalPaths = 0;
+
 #define AREA_1X1_EXITS      4
 #define AREA_1X1_INDICES    1
 #define AREA_1X1_MASK       0x0001U
@@ -128,11 +135,11 @@ static const tArea3x4AdjacentIndexLookup Area3x4AdjacentIndexLookup[AREA_3X4_IND
 #define TOP(i)          (Area3x4AdjacentIndexLookup[i].Top)
 #define BOTTOM(i)       (Area3x4AdjacentIndexLookup[i].Bottom)
 
-static tSize area_3x4_index_longest_path(uint16_t Data, tIndex Index);
-static bool area_3x4_longest_path(uint16_t Data, tIndex Start, tIndex End, tSize *pLength, uint16_t *pPath);
-static bool area_3x4_has_through_path(uint16_t Data);
-static bool area_3x4_has_path(uint16_t Data, tIndex Start, tIndex End);
-static void area_3x4_get_lookup_paths(uint16_t Data, tIndex Start, tIndex End, uint16_t Path, tVector *pVector);
+//static tSize area_3x4_index_longest_path(uint16_t Data, tIndex Index);
+//static bool area_3x4_longest_path(uint16_t Data, tIndex Start, tIndex End, tSize *pLength, uint16_t *pPath);
+//static bool area_3x4_has_through_path(uint16_t Data);
+//static bool area_3x4_has_path(uint16_t Data, tIndex Start, tIndex End);
+//static void area_3x4_get_lookup_paths(uint16_t Data, tIndex Start, tIndex End, uint16_t Path, tVector *pVector);
 
 static tSize area_3x4_lookup_longest_path(uint64_t Data, tIndex Index);
 static tSize area_1x1_lookup_longest_path(uint64_t Data, tIndex Index);
@@ -201,9 +208,12 @@ void scorer_init()
                 
             if (BitTest16(Data, Start))
             {
+                uint16_t Area = 0U;
+
+                area_3x4_area(Data, Start, &Area);
                 vector_init(&pIndexLookup->Exits);
 
-                pIndexLookup->LongestPath = area_3x4_index_longest_path(Data, Start);
+                pIndexLookup->LongestPath = area_3x4_index_longest_path(Area, Start);
 
                 for (tIndex Exit = 0; Exit < AREA_3X4_EXITS; ++Exit)
                 {
@@ -211,12 +221,13 @@ void scorer_init()
                     uint16_t Path = 0U;
                     tSize Length;
 
-                    if (BitTest16(Data, End) AND area_3x4_longest_path(Data, Start, End, &Length, &Path))
+                    // don't need to check if path exists now?
+                    if (BitTest16(Area, End) AND area_3x4_longest_path(Area, Start, End, &Length, &Path))
                     {
                         tArea3x4PathLookup *pPathLookup = emalloc(sizeof(tArea3x4PathLookup));
 
                         vector_init(&pPathLookup->Paths);
-                        area_3x4_get_lookup_paths(Data, Start, End, 0U, &pPathLookup->Paths);
+                        area_3x4_get_lookup_paths(Area, Start, End, 0U, &pPathLookup->Paths, Length);
 
                         pPathLookup->Exit = Exit;
 
@@ -247,8 +258,68 @@ void scorer_init()
 
                             vector_add(&pPathLookup->Paths, (void *) pPath);
                         }
-                            
+
                         vector_add(&pIndexLookup->Exits, (void *) pPathLookup);
+
+                        // filter paths here
+                        if (vector_size(&pPathLookup->Paths) > 1)
+                        //if (Start == 8 AND End == 10 && Data == 0b010111011111)
+                        {
+                            printf("=========== start: %d, exit: %d, end: %d, max length: %d ===========\n", Start, Exit, End, Length);
+                            printf("DATA\n");
+                            area_3x4_print(Data);
+                            //printf("USED\n");
+                            //area_3x4_print(Used);
+                            printf("FOUND PATHS: %d\n", vector_size(&pPathLookup->Paths));
+                            vector_iterator_init(&PathsIterator, &pPathLookup->Paths);
+                            while (vector_iterator_has_next(&PathsIterator))
+                            {
+                                tArea3x4Path *pPath = vector_iterator_next(&PathsIterator);
+                                if (NOT BitEmpty16(pPath->Path & ~Data))
+                                {
+                                    printf("bad path!!!\n");
+                                }
+                                printf("length: %d, path:\n", pPath->Length);
+                                area_3x4_print(pPath->Path);
+                            }
+                        }
+
+                        //filter rules ideas
+                        //  if path has a "hole", e.g. 000100110010 for 001101110011
+
+                        // if square not used in path and non-exit square and no path to exit and another path uses square, don't need that path
+                        
+                        // if previously computed already contains path don't need it???
+
+                        // if all paths don't use a square, then don't need to check it for through-paths
+                        // and all squares of all paths, diff it from data, check for through-paths against that
+
+                        // keep track of available through-path length (ATPL)?
+                        // if there is a path with greater or equal length and current path does not have greater through-path available
+                        //   discard current path?
+
+                        // keep max path (MaxP) and all paths where path length (PL) + ATPL >= MaxPL
+                        //  can there be multiple through-paths? compare to min ATPL or max ATPL?
+                        //  can we assume there is no scenario where you need to go through more than twice because of 3x4 area
+                        //  may needn to consider if one through-path covers another through-path
+                        //    only need paths that maximize something?
+                        // may need to distinguish between end-path and through-path
+                        // consider if through-path allows more exits?
+
+                        /*
+                        for (tIndex Index = vector_size(&pPathLookup->Paths); Index > 0; --Index)
+                        {
+                            tArea3x4Path *pPath = vector_get(&pPathLookup->Paths, Index - 1);
+
+                            if (NOT area_3x4_has_through_path(Used & ~pPath->Path))
+                            {
+                                vector_take(&pPathLookup->Paths, Index - 1);
+                                free(pPath);
+                            }
+                        }
+                        */
+
+                        TotalPaths += vector_size(&pPathLookup->Paths);
                     }
                 }
             }
@@ -305,6 +376,8 @@ void scorer_free()
             vector_free(&pIndexLookup->Exits);
         }
     }
+
+    TotalPaths = 0;
 }
 
 tScore scorer_score(tBoard *pBoard)
@@ -335,6 +408,8 @@ static tSize area_3x4_lookup_longest_path(uint64_t Data, tIndex Index)
     tArea3x4Lookup *pLookup = &Area3x4Lookup[AREA_3X4_ROTATE_Q(Data, Index)];
     tArea3x4IndexLookup *pIndexLookup = &pLookup->Indices[AREA_3X4_INDEX(Index)];
     tSize MaxPathLength = 0;
+
+    //make list of tArea3x4Paths in longest path and set Used++ for each?
 
     SET_IF_GREATER(pIndexLookup->LongestPath, MaxPathLength);
 
@@ -389,7 +464,7 @@ static tSize area_1x1_lookup_longest_path(uint64_t Data, tIndex Index)
     return MaxPathLength + 1;
 }
 
-static tSize area_3x4_index_longest_path(uint16_t Data, tIndex Index)
+tSize area_3x4_index_longest_path(uint16_t Data, tIndex Index)
 {
     tSize PathLength, MaxPathLength = 0;
 
@@ -422,7 +497,7 @@ static tSize area_3x4_index_longest_path(uint16_t Data, tIndex Index)
     return MaxPathLength + 1;
 }
 
-static bool area_3x4_longest_path(uint16_t Data, tIndex Start, tIndex End, tSize *pLength, uint16_t *pPath)
+bool area_3x4_longest_path(uint16_t Data, tIndex Start, tIndex End, tSize *pLength, uint16_t *pPath)
 {
     tSize PathLength, MaxPathLength = 0;
     uint16_t MaxPath, ThisPath = 0U;
@@ -486,12 +561,14 @@ Done:
     return PathFound;
 }
 
-static void area_3x4_get_lookup_paths(uint16_t Data, tIndex Start, tIndex End, uint16_t Path, tVector *pPaths)
+// you already know a path exists before calling this
+// traverses all paths but only keeps those with a "through-path"
+void area_3x4_get_lookup_paths(uint16_t Data, tIndex Start, tIndex End, uint16_t Path, tVector *pPaths, tSize MaxLength)
 {
     BitSet16(&Path, Start);
     BitReset16(&Data, Start);
 
-    if (Start == End AND area_3x4_has_through_path(Data & ~Path))
+    if (Start == End AND area_3x4_has_through_path(Data & ~Path, Path, MaxLength))
     {
         tArea3x4Path *pPath = emalloc(sizeof(tArea3x4Path));
 
@@ -503,17 +580,20 @@ static void area_3x4_get_lookup_paths(uint16_t Data, tIndex Start, tIndex End, u
         return;
     }
 
-    if (LEFT_VALID(Start) AND BitTest16(Data, LEFT(Start))) area_3x4_get_lookup_paths(Data, LEFT(Start), End, Path, pPaths);
-    if (RIGHT_VALID(Start) AND BitTest16(Data, RIGHT(Start))) area_3x4_get_lookup_paths(Data, RIGHT(Start), End, Path, pPaths);
-    if (TOP_VALID(Start) AND BitTest16(Data, TOP(Start))) area_3x4_get_lookup_paths(Data, TOP(Start), End, Path, pPaths);
-    if (BOTTOM_VALID(Start) AND BitTest16(Data, BOTTOM(Start))) area_3x4_get_lookup_paths(Data, BOTTOM(Start), End, Path, pPaths);
+    if (LEFT_VALID(Start) AND BitTest16(Data, LEFT(Start))) area_3x4_get_lookup_paths(Data, LEFT(Start), End, Path, pPaths, MaxLength);
+    if (RIGHT_VALID(Start) AND BitTest16(Data, RIGHT(Start))) area_3x4_get_lookup_paths(Data, RIGHT(Start), End, Path, pPaths, MaxLength);
+    if (TOP_VALID(Start) AND BitTest16(Data, TOP(Start))) area_3x4_get_lookup_paths(Data, TOP(Start), End, Path, pPaths, MaxLength);
+    if (BOTTOM_VALID(Start) AND BitTest16(Data, BOTTOM(Start))) area_3x4_get_lookup_paths(Data, BOTTOM(Start), End, Path, pPaths, MaxLength);
 }
 
-static bool area_3x4_has_through_path(uint16_t Data)
+// pass in start data here and check for blocking through-path?
+// probably need to compare to other computed paths at some point
+/*
+bool area_3x4_has_through_path(uint16_t Data)
 {
     bool PathFound = false;
 
-    for (tIndex StartExit= 0; StartExit < AREA_3X4_EXITS; ++StartExit)
+    for (tIndex StartExit = 0; StartExit < AREA_3X4_EXITS; ++StartExit)
     {
         for (tIndex End = 0; End < AREA_3X4_INDICES; ++End)
         {
@@ -529,8 +609,77 @@ static bool area_3x4_has_through_path(uint16_t Data)
 
     return PathFound;
 }
+*/
 
-static bool area_3x4_has_path(uint16_t Data, tIndex Start, tIndex End)
+bool area_3x4_has_through_path(uint16_t Data, uint16_t PrimaryPath, tSize MaxLength)
+{
+    bool PathFound = false;
+
+    // only consider squares that touch original data
+
+    // find true through-paths
+    for (tIndex StartExit = 0; StartExit < AREA_3X4_EXITS; ++StartExit)
+    {
+        for (tIndex EndExit = 0; EndExit < AREA_3X4_EXITS; ++EndExit)
+        {
+            if (StartExit != EndExit)
+            {
+                tIndex Start = AREA_3X4_EXIT_INDEX(StartExit), End = AREA_3X4_EXIT_INDEX(EndExit);
+
+                if (BitTest16(Data, Start) AND BitTest16(Data, End) AND area_3x4_has_path(Data, Start, End))
+                {
+                    PathFound = true;
+                    goto Done;
+                }
+            }
+        }
+    }
+
+    tSize PrimaryPathLength = BitPopCount16(PrimaryPath);
+
+    // find viable end-paths
+    for (tIndex StartExit = 0; StartExit < AREA_3X4_EXITS; ++StartExit)
+    {
+        for (tIndex End = 0; End < AREA_3X4_INDICES; ++End)
+        {
+            tIndex Start = AREA_3X4_EXIT_INDEX(StartExit);
+            tSize Length = 0U;
+            uint16_t SecondaryPath = 0U;
+
+            // if primary path length + end path > max path length, keep path
+            if (BitTest16(Data, Start)
+                AND BitTest16(Data, End)
+                AND area_3x4_longest_path(Data, Start, End, &Length, &SecondaryPath)
+                AND PrimaryPathLength + Length > MaxLength)
+            {
+                //printf("DATA\n");
+                //area_3x4_print(PrimaryPath | Data);
+                //printf("PRIMARY\n");
+                //area_3x4_print(PrimaryPath);
+                //printf("SECONDARY\n");
+                //area_3x4_print(SecondaryPath);
+                PathFound = true;
+                goto Done;
+            }
+        }
+    }
+
+Done:
+    return PathFound;
+}
+
+void area_3x4_area(uint16_t Data, tIndex Index, uint16_t *pArea)
+{
+    BitReset16(&Data, Index);
+    BitSet16(pArea, Index);
+
+    if (LEFT_VALID(Index) AND BitTest16(Data, LEFT(Index))) area_3x4_area(Data, LEFT(Index), pArea);
+    if (RIGHT_VALID(Index) AND BitTest16(Data, RIGHT(Index))) area_3x4_area(Data, RIGHT(Index), pArea);
+    if (TOP_VALID(Index) AND BitTest16(Data, TOP(Index))) area_3x4_area(Data, TOP(Index), pArea);
+    if (BOTTOM_VALID(Index) AND BitTest16(Data, BOTTOM(Index))) area_3x4_area(Data, BOTTOM(Index), pArea);
+}
+
+bool area_3x4_has_path(uint16_t Data, tIndex Start, tIndex End)
 {
     bool PathFound = false;
 
@@ -692,4 +841,30 @@ static uint16_t area_3x4_contract_q4(uint64_t Data)
          | (C >> 29 & AREA_3x4_MASK_06_08)
          | (C >> 25 & AREA_3x4_MASK_03_05)
          | (C >> 21 & AREA_3x4_MASK_00_02);
+}
+
+static void area_3x4_print(uint16_t Data)
+{
+    for (tIndex i = 0; i < AREA_3X4_INDICES; ++i)
+    {
+        printf("[%c]", BitTest16(Data, i) ? 'X' : ' ');
+        if ((i + 1) % 4 == 0) printf("\n");
+    }
+    printf("\n");
+}
+
+static void area_7x7_print(uint64_t Data)
+{
+    tBoard Board;
+
+    board_init(&Board);
+
+    Board.Data = Data;
+    Board.Empty = 0ULL;
+
+    char *Str = board_string(&Board);
+
+    printf("%s\n\n", Str);
+
+    free(Str);
 }
