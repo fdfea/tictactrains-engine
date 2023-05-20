@@ -310,31 +310,6 @@ void scorer_free()
     dbg_printf(DEBUG_LEVEL_INFO, "Disposed scorer lookup");
 }
 
-/*
-tScore scorer_score(tBoard *pBoard)
-{
-    tScore ScoreX = 0, ScoreO = 0;
-
-    for (tIndex i = 0; i < ROWS*COLUMNS; ++i)
-    {
-        bool Player = board_index_player(pBoard, i);
-        uint64_t Data = IF Player THEN pBoard->Data ELSE ~pBoard->Data & BOARD_MASK;
-        tScore Score = BOARD_AREA_LONGEST_PATH(Data, i);
-
-        if (Player)
-        {
-            SET_IF_GREATER(Score, ScoreX);
-        }
-        else
-        {
-            SET_IF_GREATER(Score, ScoreO);
-        }
-    }
-
-    return ScoreX - ScoreO;
-}
-*/
-
 tSize scorer_longest_path(uint64_t Data, tIndex Index, uint64_t *pArea)
 {
     return BOARD_AREA_LONGEST_PATH(Data, Index, pArea);
