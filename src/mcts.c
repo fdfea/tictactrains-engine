@@ -3,15 +3,18 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+
+#ifdef TIMED
 #include <time.h>
+#endif
 
 #include "board.h"
 #include "debug.h"
 #include "mctn.h"
 #include "mctnlist.h"
 #include "mcts.h"
-#include "rules.h"
 #include "random.h"
+#include "rules.h"
 #include "types.h"
 #include "util.h"
 
@@ -47,7 +50,6 @@ void mcts_init(tMcts *pMcts, tRules *pRules, tBoard *pState, tMctsConfig *pConfi
 void mcts_config_init(tMctsConfig *pConfig)
 {
     pConfig->Simulations = 1000;
-    pConfig->ScoringAlgorithm = SCORING_ALGORITHM_OPTIMAL;
     pConfig->SearchOnlyNeighbors = true;
 }
 
@@ -182,7 +184,7 @@ static float mcts_simulate_playout(tMcts *pMcts, tBoard *pState)
     board_copy(&Board, pState);
     rules_simulate_playout(pMcts->pRules, &Board, &pMcts->Random, pMcts->Config.SearchOnlyNeighbors);
     
-    Score = mcts_weight_score(board_score(&Board, pMcts->Config.ScoringAlgorithm));
+    Score = mcts_weight_score(board_score(&Board));
 
     if (NOT pMcts->Player)
     {

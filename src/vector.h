@@ -16,6 +16,12 @@ typedef struct Vector
 }
 tVector;
 
+typedef struct VectorIterator
+{
+    void **ppCurrent, *pEnd;
+}
+tVectorIterator;
+
 int vector_init(tVector *pVector);
 int vector_init_capacity(tVector *pVector, tSize Capacity);
 int vector_init_items(tVector *pVector, void **ppItems, tSize Size);
@@ -30,6 +36,11 @@ bool vector_merge(tVector *pVector, tVector *pV);
 void *vector_get(tVector *pVector, tIndex Index);
 void *vector_set(tVector *pVector, tIndex Index, void *pItem);
 void *vector_take(tVector *pVector, tIndex Index);
+void *vector_pop(tVector *pVector);
 void vector_shuffle(tVector *pVector, tRandom *pRand);
+
+void vector_iterator_init(tVectorIterator *pIterator, tVector* pVector);
+bool vector_iterator_has_next(tVectorIterator *pIterator);
+void *vector_iterator_next(tVectorIterator *pIterator);
 
 #endif

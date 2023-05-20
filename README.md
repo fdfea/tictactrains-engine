@@ -34,9 +34,10 @@ You can also compile TicTactrains Engine with CMake. An example command (on Wind
 I recommend that you always compile the program with maximum performance optimization (the `-O3` flag on GCC), as it significantly speeds up the AI. There are a few other options that can be specified when compiling to add some advanced features or to print extra information during the game. To add them with GCC, use the `-D<DEF>` compiler flag. For example, `gcc ... -DDEBUG ... -o tictactrains *.c`. To add them with CMake, edit `CMakeLists.txt`, uncomment the `add_definitions()` line, and add the desired options. For example, `add_definitions(-DDEBUG ...)`. 
 
 The definitions available are:
-* `DEBUG` – Print debug information (will make the program slower)
+* `DEBUG` – Print debug information (may make the program slower)
 * `STATS` – Print statistics for the computer opponent search tree on each move
 * `TIMED` – Print the time the computer spent simulating on each move
+* `SPEED` – Optimize computer opponent for speed (25-100% faster with some extra memory overhead)
 * `PACKED` – Pack the structs in the search tree to reduce memory usage (may be slower on some architectures)
 * `VISITS32` – Use a 32-bit integer for node visits in the search tree to allow for deeper searches (default is 16-bit)
 
@@ -53,7 +54,6 @@ The options are:
 * `COMPUTER_PLAYER` – If the computer is playing, whether the computer or player should move first
 * `RULES_TYPE` – The rule set to use
 * `SIMULATIONS` – How many simulations the computer should run before making a move
-* `SCORING_ALGORITHM` – The algorithm to score simulated games
 * `SEARCH_ONLY_NEIGHBORS` – Whether the computer should only search neighboring states (i.e. states in which the next move is a square that is directly adjacent or diagonal to an occupied square)
 * `STARTING_POSITION` – A list of moves from which to start the game
 
@@ -121,9 +121,11 @@ These rule modifications helps to keep the gameplay fresh and can make the game 
 
 ### **Explanation of AI**
 
-The artificially intelligent opponent uses the Monte Carlo Tree Search (MCTS) algorithm. The algorithm works by expanding a search tree from the current game state. The AI strategically works its way down the tree until it finds a leaf node and then expands the node's children. Then it simulates a playout from one of the new nodes and propagates the result back up to the root of the tree. It repeats this process for a given number of simulations. The tree looks like a minimax tree, but the nodes with the best score are explored more, and the root node child with the most visits is ultimately the one that the AI chooses. This allows the AI to avoid exploring nodes that are statistically unlikely to be good, saving a lot of time compared to minimax. You will find that the AI is very strong with 10000 or more simulations per move. On my machine, 10000 simulations takes an average of about 400 ms, when optimal scoring and sufficient compiler optimization are used. However, if paths are long, scoring can take noticeably longer, due to the fact that finding the longest path in a graph is an NP-complete problem. 
+The artificially intelligent opponent uses the Monte Carlo Tree Search (MCTS) algorithm. The algorithm works by expanding a search tree from the current game state. The AI strategically works its way down the tree until it finds a leaf node, at which point it expands the node's children. Next, it simulates a playout from one of the new child nodes and propagates the result back up to the root of the tree. It repeats this process for a given number of simulations. The tree looks like a minimax tree, but the nodes with the best score are explored more, and the root node child with the most visits is ultimately the one that the AI chooses. This allows the AI to avoid exploring nodes that are statistically unlikely to be good, saving a lot of time compared to minimax. You will find that the AI is very strong with 10000 or more simulations per move. On my machine (Intel Core i7-10750H, Windows 10, MinGW-w64 GCC 8.1.0), 10000 simulations takes about 200 ms on average when sufficient compiler optimization is used. However, if paths are long, scoring can take noticeably longer, due to the fact that finding the longest path in a graph is an NP-complete problem in the general case. 
 
 The search tree can also get quite large when a high number of simulations are used. This is one of the main reasons I used C to implement the engine, as I was able to condense each search tree node into a minimum of 31 bytes, which makes the size of the tree negligible for just about any device or use case. 
+
+For extreme optimization, I implemented a lookup table to precompute paths for scoring. I divided the 7x7 board into four 3x4 grids with one 1x1 grid in the center. The lookup table stores every path from every valid index to every valid exit in each 3x4 area and computes rotations so the paths can be shared between the quadrants of the board. Fortunately, not every one of these paths needs to be search, I implemented some heuristics to reduce the total paths in the lookup table from about 116000 to about 80000, but many of them are specific to the dimensions of the area. Using the lookup table, the scorer starts at an index of the board and iterates over all the paths to each exit, and, if the exit connects to a path in another quadrant, it continues to search until it finds the longest path. Essentially, the lookup table reduces the search space by trading depth of search for breadth of search. I've found that in the worst case you can expect about a 25% increase in performance, but in practice it is often twice as fast as the brute-force algorithm. 
 
 ### **Credits**
 

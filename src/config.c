@@ -19,7 +19,6 @@
 #define CONFIG_COMPUTER_PLAYER          "COMPUTER_PLAYER"
 #define CONFIG_RULES_TYPE               "RULES_TYPE"
 #define CONFIG_SIMULATIONS              "SIMULATIONS"
-#define CONFIG_SCORING_ALGORITHM        "SCORING_ALGORITHM"
 #define CONFIG_SEARCH_ONLY_NEIGHBORS    "SEARCH_ONLY_NEIGHBORS"
 #define CONFIG_STARTING_MOVES           "STARTING_MOVES"
 
@@ -64,10 +63,9 @@ int config_load(tConfig *pConfig)
     
     struct
     {
-        bool ComputerPlaying, ComputerPlayer, RulesType, Simulations,
-            ScoringAlgorithm, SearchOnlyNeighbors, StartPosition;
+        bool ComputerPlaying, ComputerPlayer, RulesType, Simulations, SearchOnlyNeighbors, StartPosition;
     }
-    Found = { false, false, false, false, false, false, false };
+    Found = { false, false, false, false, false, false };
 
     if ((pFile = fopen(CONFIG_FILENAME, "r")) ISNOT NULL)
     {
@@ -193,29 +191,6 @@ int config_load(tConfig *pConfig)
 
                 Found.Simulations = true;
             }
-            else if (NOT Found.ScoringAlgorithm AND CONFIG_STRNCMP(pKey, CONFIG_SCORING_ALGORITHM))
-            {
-                switch (Val)
-                {
-                    case SCORING_ALGORITHM_OPTIMAL:
-                    {
-                        pConfig->MctsConfig.ScoringAlgorithm = SCORING_ALGORITHM_OPTIMAL;
-                        break;
-                    }
-                    case SCORING_ALGORITHM_QUICK:
-                    {
-                        pConfig->MctsConfig.ScoringAlgorithm = SCORING_ALGORITHM_QUICK;
-                        break;
-                    }
-                    default:
-                    {
-                        Res = -EINVAL;
-                        goto Error;
-                    }
-                }
-
-                Found.ScoringAlgorithm = true;
-            }
             else if (NOT Found.SearchOnlyNeighbors AND CONFIG_STRNCMP(pKey, CONFIG_SEARCH_ONLY_NEIGHBORS))
             {
                 if (Val == 0)
@@ -252,7 +227,6 @@ int config_load(tConfig *pConfig)
     dbg_printf(DEBUG_LEVEL_INFO, "%s: %d", CONFIG_COMPUTER_PLAYER, pConfig->ComputerPlayer);
     dbg_printf(DEBUG_LEVEL_INFO, "%s: %d", CONFIG_RULES_TYPE, pConfig->RulesConfig.RulesType);
     dbg_printf(DEBUG_LEVEL_INFO, "%s: %d", CONFIG_SIMULATIONS, pConfig->MctsConfig.Simulations);
-    dbg_printf(DEBUG_LEVEL_INFO, "%s: %d", CONFIG_SCORING_ALGORITHM, pConfig->MctsConfig.ScoringAlgorithm);
     dbg_printf(DEBUG_LEVEL_INFO, "%s: %d", CONFIG_SEARCH_ONLY_NEIGHBORS, pConfig->MctsConfig.SearchOnlyNeighbors);
 
     goto Success;

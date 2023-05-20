@@ -183,6 +183,18 @@ Error:
     return pItem;
 }
 
+void *vector_pop(tVector *pVector)
+{
+    void *pItem = NULL;
+
+    if (NOT vector_empty(pVector))
+    {
+        pItem = vector_take(pVector, vector_size(pVector) - 1);
+    }
+
+    return pItem;
+}
+
 void vector_shuffle(tVector *pVector, tRandom *pRandom)
 {
     void *pTmp;
@@ -192,7 +204,7 @@ void vector_shuffle(tVector *pVector, tRandom *pRandom)
     {
         j = random_next(pRandom) % (i + 1);
         pTmp = vector_set(pVector, j, vector_get(pVector, i));
-        (void) vector_set(pVector, i, pTmp);
+        vector_set(pVector, i, pTmp);
     }
 }
 
@@ -204,7 +216,7 @@ static void vector_resize(tVector *pVector, tSize Size, bool Grow)
 
     if (Grow AND Size > Capacity)
     {
-        Resize = (Size >= VECTOR_HALF_CAPACITY) ? VECTOR_MAX_CAPACITY : Size << VECTOR_SCALING_FACTOR;
+        Resize = IF (Size >= VECTOR_HALF_CAPACITY) THEN VECTOR_MAX_CAPACITY ELSE Size << VECTOR_SCALING_FACTOR;
     }
     else if (NOT Grow AND Size <= Capacity >> VECTOR_SCALING_FACTOR)
     {
@@ -216,4 +228,22 @@ static void vector_resize(tVector *pVector, tSize Size, bool Grow)
         pVector->ppItems = erealloc(pVector->ppItems, Resize * sizeof(void *));
         pVector->Capacity = Resize;
     }
+}
+
+void vector_iterator_init(tVectorIterator *pIterator, tVector* pVector)
+{
+    void **ppBegin = pVector->ppItems;
+
+    pIterator->ppCurrent = ppBegin;
+    pIterator->pEnd = (char *) ppBegin + vector_size(pVector) * sizeof(void *);
+}
+
+bool vector_iterator_has_next(tVectorIterator *pIterator)
+{
+    return (void *) pIterator->ppCurrent < pIterator->pEnd;
+}
+
+void *vector_iterator_next(tVectorIterator *pIterator)
+{
+    return *pIterator->ppCurrent++;
 }
