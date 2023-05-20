@@ -13,8 +13,8 @@
 #include "mctn.h"
 #include "mctnlist.h"
 #include "mcts.h"
-#include "rules.h"
 #include "random.h"
+#include "rules.h"
 #include "types.h"
 #include "util.h"
 

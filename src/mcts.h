@@ -5,8 +5,8 @@
 
 #include "board.h"
 #include "mctn.h"
-#include "rules.h"
 #include "random.h"
+#include "rules.h"
 
 typedef struct MctsConfig 
 {

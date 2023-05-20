@@ -204,7 +204,7 @@ void vector_shuffle(tVector *pVector, tRandom *pRandom)
     {
         j = random_next(pRandom) % (i + 1);
         pTmp = vector_set(pVector, j, vector_get(pVector, i));
-        (void) vector_set(pVector, i, pTmp);
+        vector_set(pVector, i, pTmp);
     }
 }
 

@@ -310,7 +310,9 @@ static int ttt_load_moves(tTTT *pGame, tVector *pMoves)
 
     for (tIndex i = 0; i < vector_size(pMoves); ++i)
     {
-        Res = ttt_give_move(pGame, *((tIndex *) vector_get(pMoves, i)));
+        tIndex *pMove = vector_get(pMoves, i);
+
+        Res = ttt_give_move(pGame, *pMove);
         if (Res < 0)
         {
             board_copy(&pGame->Board, &Board);
