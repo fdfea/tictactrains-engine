@@ -72,7 +72,6 @@ static const uint64_t IndicesLookup[ROWS*COLUMNS][2] = {
 #define ADJACENT_INDICES(i)     (IndicesLookup[i][0])
 #define NEIGHBOR_INDICES(i)     (IndicesLookup[i][1])
 
-#ifndef SPEED
 typedef struct IndexLookup
 {
     bool LeftValid, RightValid, TopValid, BottomValid;
@@ -141,6 +140,7 @@ static const tIndexLookup IndexLookup[ROWS*COLUMNS] = {
 #define TOP(i)          (IndexLookup[i].Top)
 #define BOTTOM(i)       (IndexLookup[i].Bottom)
 
+#ifndef SPEED
 static tSize board_index_longest_path(uint64_t Data, tIndex Index, uint64_t *pArea);
 #endif
 
@@ -251,46 +251,43 @@ tIndex board_last_move_index(tBoard *pBoard)
 
 tScore board_score(tBoard *pBoard)
 {
-#ifdef SPEED
-    return scorer_score(pBoard);
-#else
     tScore ScoreX = 0, ScoreO = 0;
     uint64_t NotEmpty = ~pBoard->Empty & BOARD_MASK;
-    const uint64_t NotEmptyConst = NotEmpty;
+    uint64_t Indices = NotEmpty;
 
     uint64_t IndexAreas[ROWS*COLUMNS] = { 0ULL };
 
-    while (NOT BitEmpty64(NotEmpty))
+    while (NOT BitEmpty64(Indices))
     {
-        tIndex Index = BitTzCount64(NotEmpty);
+        tIndex Index = BitTzCount64(Indices);
         bool Player = board_index_player(pBoard, Index);
-        uint64_t Data = IF Player THEN pBoard->Data & NotEmptyConst ELSE ~pBoard->Data & NotEmptyConst;
-        tSize AdjacentCount = board_index_adjacent_count(Data, Index);
+        uint64_t Data = IF Player THEN pBoard->Data & NotEmpty ELSE ~pBoard->Data & NotEmpty;
         uint64_t Area = IndexAreas[Index];
-        tScore MaxSoFar = IF Player THEN ScoreX ELSE ScoreO;
-        bool DoScore = (AdjacentCount == 1 OR AdjacentCount == 2) AND (BitEmpty64(Area) OR BitPopCount64(Area) > MaxSoFar);
+        tSize AdjacentCount = board_index_adjacent_count(Data, Index);
+        tScore BestScore = IF Player THEN ScoreX ELSE ScoreO;
+        bool ShouldScore = (AdjacentCount == 1 OR AdjacentCount == 2) AND (BitEmpty64(Area) OR BitPopCount64(Area) > BestScore);
 
 #ifdef SPEED
-        tSize Score = IF DoScore THEN scorer_longest_path(Data, Index, &Area)
+        tSize Score = IF ShouldScore THEN scorer_longest_path(Data, Index, &Area)
             ELSE IF (AdjacentCount == 0) THEN 1
             ELSE 0;
 #else
-        tSize Score = IF DoScore THEN board_index_longest_path(Data, Index, &Area)
+        tSize Score = IF ShouldScore THEN board_index_longest_path(Data, Index, &Area)
             ELSE IF (AdjacentCount == 0) THEN 1
             ELSE 0;
 #endif
 
         if (NOT BitEmpty64(Area) AND BitEmpty64(IndexAreas[Index]))
         {
-            uint64_t AreaNotEmpty = Area;
+            uint64_t AreaIndices = Area;
 
-            while (NOT BitEmpty64(AreaNotEmpty))
+            while (NOT BitEmpty64(AreaIndices))
             {
-                tIndex AreaIndex = BitTzCount64(AreaNotEmpty);
+                tIndex AreaIndex = BitTzCount64(AreaIndices);
 
                 IndexAreas[AreaIndex] = Area;
 
-                BitReset64(&AreaNotEmpty, AreaIndex);
+                BitReset64(&AreaIndices, AreaIndex);
             }
         }
 
@@ -303,7 +300,7 @@ tScore board_score(tBoard *pBoard)
             SET_IF_GREATER(Score, ScoreO);
         }
 
-        BitReset64(&NotEmpty, Index);
+        BitReset64(&Indices, Index);
     }
 
     return ScoreX - ScoreO;
@@ -436,4 +433,3 @@ static tSize board_index_adjacent_count(uint64_t Data, tIndex Index)
          + (TOP_VALID(Index) AND BitTest64(Data, TOP(Index)))
          + (BOTTOM_VALID(Index) AND BitTest64(Data, BOTTOM(Index)));
 }
-#endif
