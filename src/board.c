@@ -251,6 +251,9 @@ tIndex board_last_move_index(tBoard *pBoard)
 
 tScore board_score(tBoard *pBoard)
 {
+#ifdef SPEED
+    return scorer_score(pBoard);
+#else
     tScore ScoreX = 0, ScoreO = 0;
     uint64_t NotEmpty = ~pBoard->Empty & BOARD_MASK;
     const uint64_t NotEmptyConst = NotEmpty;
@@ -433,3 +436,4 @@ static tSize board_index_adjacent_count(uint64_t Data, tIndex Index)
          + (TOP_VALID(Index) AND BitTest64(Data, TOP(Index)))
          + (BOTTOM_VALID(Index) AND BitTest64(Data, BOTTOM(Index)));
 }
+#endif
