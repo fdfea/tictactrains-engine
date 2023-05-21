@@ -71,7 +71,6 @@ static const uint64_t IndicesLookup[ROWS*COLUMNS][2] = {
 #define ADJACENT_INDICES(i)     (IndicesLookup[i][0])
 #define NEIGHBOR_INDICES(i)     (IndicesLookup[i][1])
 
-#ifndef SPEED
 typedef struct IndexLookup
 {
     bool LeftValid, RightValid, TopValid, BottomValid;
@@ -140,8 +139,11 @@ static const tIndexLookup IndexLookup[ROWS*COLUMNS] = {
 #define TOP(i)          (IndexLookup[i].Top)
 #define BOTTOM(i)       (IndexLookup[i].Bottom)
 
-static tSize board_index_longest_path(uint64_t Data, tIndex Index);
+#ifndef SPEED
+static tSize board_index_longest_path(uint64_t Data, tIndex Index, uint64_t *pArea);
 #endif
+
+static tSize board_index_adjacent_count(uint64_t Data, tIndex Index);
 
 void board_init(tBoard *pBoard)
 {
@@ -248,18 +250,45 @@ tIndex board_last_move_index(tBoard *pBoard)
 
 tScore board_score(tBoard *pBoard)
 {
-#ifdef SPEED
-    return scorer_score(pBoard);
-#else
     tScore ScoreX = 0, ScoreO = 0;
     uint64_t NotEmpty = ~pBoard->Empty & BOARD_MASK;
+    uint64_t Indices = NotEmpty;
 
-    while (NOT BitEmpty64(NotEmpty))
+    uint64_t IndexAreas[ROWS*COLUMNS] = { 0ULL };
+
+    while (NOT BitEmpty64(Indices))
     {
-        tIndex Index = BitTzCount64(NotEmpty);
+        tIndex Index = BitTzCount64(Indices);
         bool Player = board_index_player(pBoard, Index);
-        uint64_t Data = IF (Player) THEN pBoard->Data ELSE ~pBoard->Data;
-        tSize Score = board_index_longest_path(Data & BOARD_MASK, Index);
+        uint64_t Data = IF Player THEN pBoard->Data & NotEmpty ELSE ~pBoard->Data & NotEmpty;
+        uint64_t Area = IndexAreas[Index];
+        tSize AdjacentCount = board_index_adjacent_count(Data, Index);
+        tScore BestScore = IF Player THEN ScoreX ELSE ScoreO;
+        bool ShouldScore = (AdjacentCount == 1 OR AdjacentCount == 2) AND (BitEmpty64(Area) OR BitPopCount64(Area) > BestScore);
+
+#ifdef SPEED
+        tSize Score = IF ShouldScore THEN scorer_longest_path(Data, Index, &Area)
+            ELSE IF (AdjacentCount == 0) THEN 1
+            ELSE 0;
+#else
+        tSize Score = IF ShouldScore THEN board_index_longest_path(Data, Index, &Area)
+            ELSE IF (AdjacentCount == 0) THEN 1
+            ELSE 0;
+#endif
+
+        if (NOT BitEmpty64(Area) AND BitEmpty64(IndexAreas[Index]))
+        {
+            uint64_t AreaIndices = Area;
+
+            while (NOT BitEmpty64(AreaIndices))
+            {
+                tIndex AreaIndex = BitTzCount64(AreaIndices);
+
+                IndexAreas[AreaIndex] = Area;
+
+                BitReset64(&AreaIndices, AreaIndex);
+            }
+        }
 
         if (Player)
         {
@@ -270,11 +299,10 @@ tScore board_score(tBoard *pBoard)
             SET_IF_GREATER(Score, ScoreO);
         }
 
-        BitReset64(&NotEmpty, Index);
+        BitReset64(&Indices, Index);
     }
 
     return ScoreX - ScoreO;
-#endif
 }
 
 char board_index_char(tBoard *pBoard, tIndex Index)
@@ -362,36 +390,45 @@ bool board_index_player(tBoard *pBoard, tIndex Index)
 }
 
 #ifndef SPEED
-static tSize board_index_longest_path(uint64_t Data, tIndex Index)
+static tSize board_index_longest_path(uint64_t Data, tIndex Index, uint64_t *pArea)
 {
     tSize PathLength, MaxPathLength = 0;
 
     BitReset64(&Data, Index);
+    BitSet64(pArea, Index);
 
     if (LEFT_VALID(Index) AND BitTest64(Data, LEFT(Index)))
     {
-        PathLength = board_index_longest_path(Data, LEFT(Index));
+        PathLength = board_index_longest_path(Data, LEFT(Index), pArea);
         SET_IF_GREATER(PathLength, MaxPathLength);
     }
 
     if (RIGHT_VALID(Index) AND BitTest64(Data, RIGHT(Index)))
     {
-        PathLength = board_index_longest_path(Data, RIGHT(Index));
+        PathLength = board_index_longest_path(Data, RIGHT(Index), pArea);
         SET_IF_GREATER(PathLength, MaxPathLength);
     }
 
     if (TOP_VALID(Index) AND BitTest64(Data, TOP(Index)))
     {
-        PathLength = board_index_longest_path(Data, TOP(Index));
+        PathLength = board_index_longest_path(Data, TOP(Index), pArea);
         SET_IF_GREATER(PathLength, MaxPathLength);
     }
     
     if (BOTTOM_VALID(Index) AND BitTest64(Data, BOTTOM(Index)))
     {
-        PathLength = board_index_longest_path(Data, BOTTOM(Index));
+        PathLength = board_index_longest_path(Data, BOTTOM(Index), pArea);
         SET_IF_GREATER(PathLength, MaxPathLength);
     }
 
     return MaxPathLength + 1;
 }
 #endif
+
+static tSize board_index_adjacent_count(uint64_t Data, tIndex Index)
+{
+    return (LEFT_VALID(Index) AND BitTest64(Data, LEFT(Index)))
+         + (RIGHT_VALID(Index) AND BitTest64(Data, RIGHT(Index)))
+         + (TOP_VALID(Index) AND BitTest64(Data, TOP(Index)))
+         + (BOTTOM_VALID(Index) AND BitTest64(Data, BOTTOM(Index)));
+}

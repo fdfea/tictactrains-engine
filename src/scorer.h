@@ -7,6 +7,6 @@
 void scorer_init();
 void scorer_free();
 
-tScore scorer_score(tBoard *pBoard);
+tSize scorer_longest_path(uint64_t Data, tIndex Index, uint64_t *pArea);
 
 #endif
