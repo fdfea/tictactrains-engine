@@ -173,7 +173,7 @@ int ttt_get_ai_move(tTTT *pGame)
     if (ttt_finished(pGame))
     {
         Res = -EINVAL;
-        dbg_printf(DEBUG_LEVEL_WARN, "Cannot get AI move from finished game");
+        dbg_printf(DEBUG_LEVEL_WARN, "Cannot get computer move because game is finished");
         goto Error;
     }
 
@@ -209,7 +209,7 @@ int ttt_give_move(tTTT *pGame, int Index)
     if (ttt_finished(pGame))
     {
         Res = -EINVAL;
-        dbg_printf(DEBUG_LEVEL_WARN, "Cannot give move to finished game");
+        dbg_printf(DEBUG_LEVEL_WARN, "Cannot make move because game is finished");
         goto Error;
     }
 

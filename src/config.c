@@ -244,7 +244,7 @@ NoFile:
 static int config_parse_moves(tVector *pMoves, char *pMovesStr)
 {
     int Res = 0;
-    char Move[BOARD_ID_STR_LEN] = {'\0'};
+    char Move[BOARD_ID_STR_LEN] = { 0 };
     tIndex Index = 0, MoveIndex = 0, *pMoveIndex = NULL;
 
     if (pMovesStr IS NULL)
