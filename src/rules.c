@@ -176,9 +176,29 @@ static void rules_load(tRules *pRules, eRulesType RulesType)
             memcpy(&pRules->MovePolicies, &RulesModern, sizeof(pRules->MovePolicies));
             break;
         }
-        case RULES_EXPERIMENTAL:
+        case RULES_POSTMODERN:
         {
-            memcpy(&pRules->MovePolicies, &RulesExperimental, sizeof(pRules->MovePolicies));
+            memcpy(&pRules->MovePolicies, &RulesPostmodern, sizeof(pRules->MovePolicies));
+            break;
+        }
+        case RULES_SPANISH:
+        {
+            memcpy(&pRules->MovePolicies, &RulesSpanish, sizeof(pRules->MovePolicies));
+            break;
+        }
+        case RULES_SWISS:
+        {
+            memcpy(&pRules->MovePolicies, &RulesSwiss, sizeof(pRules->MovePolicies));
+            break;
+        }
+        case RULES_VIENNESE:
+        {
+            memcpy(&pRules->MovePolicies, &RulesViennese, sizeof(pRules->MovePolicies));
+            break;
+        }
+        case RULES_MALLORCAN:
+        {
+            memcpy(&pRules->MovePolicies, &RulesMallorcan, sizeof(pRules->MovePolicies));
             break;
         }
         default: 

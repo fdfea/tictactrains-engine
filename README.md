@@ -43,7 +43,7 @@ The definitions available are:
 
 ### **Usage**
 
-After starting the program, you will be asked to input your move according to the rule set. A valid move is two characters without any spaces corresponding to a valid square on the board, e.g. `d4`. Press enter to submit your move. If you enter an invalid move, you will be prompted until your input is valid. When playing against the computer, it will automatically make its move after you have submitted yours. When playing without the computer, the prompt will indicate which player should enter their move. After the game is finished, the score will be displayed and the program will exit. 
+After starting the program, you will be asked to input your move according to the ruleset. A valid move is two characters without any spaces corresponding to a valid square on the board, e.g. `d4`. Press enter to submit your move. If you enter an invalid move, you will be prompted until your input is valid. When playing against the computer, it will automatically make its move after you have submitted yours. When playing without the computer, the prompt will indicate which player should enter their move. After the game is finished, the score will be displayed and the program will exit. 
 
 ##### **Configuration**
 
@@ -52,7 +52,7 @@ The program reads from a configuration file, `ttt.conf`, to configure the game a
 The options are: 
 * `COMPUTER_PLAYING` – Whether to play against the computer
 * `COMPUTER_PLAYER` – If the computer is playing, whether the computer or player should move first
-* `RULES_TYPE` – The rule set to use
+* `RULES_TYPE` – The ruleset to use
 * `SIMULATIONS` – How many simulations the computer should run before making a move
 * `SEARCH_ONLY_NEIGHBORS` – Whether the computer should only search neighboring states (i.e. states in which the next move is a square that is directly adjacent or diagonal to an occupied square)
 * `STARTING_POSITION` – A list of moves from which to start the game
@@ -117,7 +117,7 @@ When the rules only allow a player to make a move in certain squares, the board 
 &  a  b  c  d  e  f  g
 ```
 
-These rule modifications helps to keep the gameplay fresh and can make the game more fair in some cases. A few rule sets are provided with TicTacTrains Engine. The default is "Classical" rules, which is notated as "(XA, OA, ...)". This means that each player alternates on every turn and can go in any square, hence the "A". Another rule sets provided is "Modern" rules, which is notated as "(XA, O1, O3, XA, OA, ...)". This means that X goes once anywhere, O goes twice (once in ring 1 and once in ring 3), and then the players alternate for the rest of the game, going wherever is available. Additional rule sets can be created by modifying the code. 
+These rule modifications helps to keep the gameplay fresh and can make the game more fair in some cases. A few rulesets are provided with TicTacTrains Engine. The default is "Classical" rules, which is notated as "(XA, OA, ...)". This means that each player alternates on every turn and can go in any square, hence the "A". Another rulesets provided is "Modern" rules, which is notated as "(XA, O1, O3, XA, OA, ...)". This means that X goes once anywhere, O goes twice (once in ring 1 and once in ring 3), and then the players alternate for the rest of the game, going wherever is available. Additional rulesets can be created by modifying the code. 
 
 ### **Explanation of AI**
 

@@ -14,7 +14,11 @@ typedef enum RulesType
 {
     RULES_CLASSICAL     = 1,
     RULES_MODERN        = 2,
-    RULES_EXPERIMENTAL  = 3,
+    RULES_POSTMODERN    = 3,
+    RULES_SPANISH       = 4,
+    RULES_SWISS         = 5,
+    RULES_VIENNESE      = 6,
+    RULES_MALLORCAN     = 7,
 } 
 eRulesType;
 
@@ -86,7 +90,40 @@ static const eMovePolicy RulesModern[ROWS*COLUMNS] =
     O_ALL, X_ALL, O_ALL, X_ALL, O_ALL, X_ALL, O_ALL,
 };
 
-static const eMovePolicy RulesExperimental[ROWS*COLUMNS] = 
+static const eMovePolicy RulesPostmodern[ROWS*COLUMNS] = 
+{
+    X_ALL, O_RING1_I, O_RING2_U, X_ALL, O_ALL, X_ALL, O_ALL,
+    X_ALL, O_ALL, X_ALL, O_ALL, X_ALL, O_ALL, X_ALL,
+    O_ALL, X_ALL, O_ALL, X_ALL, O_ALL, X_ALL, O_ALL,
+    X_ALL, O_ALL, X_ALL, O_ALL, X_ALL, O_ALL, X_ALL,
+    O_ALL, X_ALL, O_ALL, X_ALL, O_ALL, X_ALL, O_ALL,
+    X_ALL, O_ALL, X_ALL, O_ALL, X_ALL, O_ALL, X_ALL,
+    O_ALL, X_ALL, O_ALL, X_ALL, O_ALL, X_ALL, O_ALL,
+};
+
+static const eMovePolicy RulesSpanish[ROWS*COLUMNS] = 
+{
+    X_ALL, O_RING1_U, O_RING1_U, X_ALL, O_ALL, X_ALL, O_ALL,
+    X_ALL, O_ALL, X_ALL, O_ALL, X_ALL, O_ALL, X_ALL,
+    O_ALL, X_ALL, O_ALL, X_ALL, O_ALL, X_ALL, O_ALL,
+    X_ALL, O_ALL, X_ALL, O_ALL, X_ALL, O_ALL, X_ALL,
+    O_ALL, X_ALL, O_ALL, X_ALL, O_ALL, X_ALL, O_ALL,
+    X_ALL, O_ALL, X_ALL, O_ALL, X_ALL, O_ALL, X_ALL,
+    O_ALL, X_ALL, O_ALL, X_ALL, O_ALL, X_ALL, O_ALL,
+};
+
+static const eMovePolicy RulesSwiss[ROWS*COLUMNS] = 
+{
+    X_ALL, O_RING1, O_RING2, O_RING3, X_ALL, O_ALL, X_ALL,
+    O_ALL, X_ALL, O_ALL, X_ALL, O_ALL, X_ALL, O_ALL,
+    X_ALL, O_ALL, X_ALL, O_ALL, X_ALL, O_ALL, X_ALL,
+    O_ALL, X_ALL, O_ALL, X_ALL, O_ALL, X_ALL, O_ALL,
+    X_ALL, O_ALL, X_ALL, O_ALL, X_ALL, O_ALL, X_ALL,
+    O_ALL, X_ALL, O_ALL, X_ALL, O_ALL, X_ALL, O_ALL,
+    X_ALL, O_ALL, X_ALL, O_ALL, X_ALL, O_ALL, X_ALL,
+};
+
+static const eMovePolicy RulesViennese[ROWS*COLUMNS] = 
 {
     X_ALL, O_RING2_U, O_RING3, X_ALL, O_ALL, X_ALL, O_ALL,
     X_ALL, O_ALL, X_ALL, O_ALL, X_ALL, O_ALL, X_ALL,
@@ -95,6 +132,17 @@ static const eMovePolicy RulesExperimental[ROWS*COLUMNS] =
     O_ALL, X_ALL, O_ALL, X_ALL, O_ALL, X_ALL, O_ALL,
     X_ALL, O_ALL, X_ALL, O_ALL, X_ALL, O_ALL, X_ALL,
     O_ALL, X_ALL, O_ALL, X_ALL, O_ALL, X_ALL, O_ALL,
+};
+
+static const eMovePolicy RulesMallorcan[ROWS*COLUMNS] = 
+{
+    X_ALL, O_RING1, O_RING3, O_RING3, X_ALL, O_ALL, X_ALL,
+    O_ALL, X_ALL, O_ALL, X_ALL, O_ALL, X_ALL, O_ALL,
+    X_ALL, O_ALL, X_ALL, O_ALL, X_ALL, O_ALL, X_ALL,
+    O_ALL, X_ALL, O_ALL, X_ALL, O_ALL, X_ALL, O_ALL,
+    X_ALL, O_ALL, X_ALL, O_ALL, X_ALL, O_ALL, X_ALL,
+    O_ALL, X_ALL, O_ALL, X_ALL, O_ALL, X_ALL, O_ALL,
+    X_ALL, O_ALL, X_ALL, O_ALL, X_ALL, O_ALL, X_ALL,
 };
 
 #endif

@@ -163,9 +163,29 @@ int config_load(tConfig *pConfig)
                         pConfig->RulesConfig.RulesType = RULES_MODERN;
                         break;
                     }
-                    case RULES_EXPERIMENTAL: 
+                    case RULES_POSTMODERN: 
                     {
-                        pConfig->RulesConfig.RulesType = RULES_EXPERIMENTAL;
+                        pConfig->RulesConfig.RulesType = RULES_POSTMODERN;
+                        break;
+                    }
+                    case RULES_SPANISH: 
+                    {
+                        pConfig->RulesConfig.RulesType = RULES_SPANISH;
+                        break;
+                    }
+                    case RULES_SWISS: 
+                    {
+                        pConfig->RulesConfig.RulesType = RULES_SWISS;
+                        break;
+                    }
+                    case RULES_VIENNESE: 
+                    {
+                        pConfig->RulesConfig.RulesType = RULES_VIENNESE;
+                        break;
+                    }
+                    case RULES_MALLORCAN: 
+                    {
+                        pConfig->RulesConfig.RulesType = RULES_MALLORCAN;
                         break;
                     }
                     default: 
